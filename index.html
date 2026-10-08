@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Calculadora de carga enchufable</title>
+<meta name="description" content="Cómo cargar un híbrido enchufable medido en dos monedas: puntos de capacidad de la batería y euros de electricidad y gasolina, con la profundidad de descarga y la ventana útil de la batería como variables (AutoIngenium).">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  :root {
+    --bg: #EDEFF2; --card: #FFFFFF; --card2: #F4F6F8; --txt: #171B20; --txt2: #454F59; --muted: #6F7984; --line: #D5DAE0;
+    --amber: #9C6600; --amberT: #7F5300; --amberBg: #FBF3E3; --blue: #2A66B8; --blueT: #24568F; --red: #B23F3F; --redBg: #F9E9E9; --green: #2E7D57;
+    --punta: #F3DEDE; --llano: #F3ECD9; --valle: #DDEFE4; --reserva: #E3E7EC;
+    --shadow: 0 1px 2px rgba(20, 30, 40, .06), 0 6px 20px rgba(20, 30, 40, .06);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15191E; --card: #1F252C; --card2: #252D36; --txt: #F2F3F5; --txt2: #B4BCC6; --muted: #7D8794; --line: #2C343D;
+      --amber: #C98500; --amberT: #E3A52B; --amberBg: #2B2619; --blue: #3987E5; --blueT: #6FAEF5; --red: #E66767; --redBg: #2E1F1F; --green: #5FBF8A;
+      --punta: #2E1F1F; --llano: #2B2619; --valle: #1B2A22; --reserva: #252D36;
+      --shadow: none; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15191E; --card: #1F252C; --card2: #252D36; --txt: #F2F3F5; --txt2: #B4BCC6; --muted: #7D8794; --line: #2C343D;
+    --amber: #C98500; --amberT: #E3A52B; --amberBg: #2B2619; --blue: #3987E5; --blueT: #6FAEF5; --red: #E66767; --redBg: #2E1F1F; --green: #5FBF8A;
+    --punta: #2E1F1F; --llano: #2B2619; --valle: #1B2A22; --reserva: #252D36;
+    --shadow: none; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--txt); font-family: "Source Sans 3", Calibri, "Segoe UI", system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding-block: 28px 48px; padding-inline: 20px; }
+  h1, h2, h3, .num { font-family: "Source Serif 4", Cambria, Georgia, "Times New Roman", serif; font-weight: 600; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(26px, 3.4vw, 36px); line-height: 1.15; }
+  h2 { font-size: 20px; line-height: 1.25; }
+  h3 { font-size: 16px; line-height: 1.3; }
+  .lead { color: var(--txt2); max-width: 72ch; margin: 10px 0 0; }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--amberT); font-weight: 600; }
+  .eyebrow.muted { color: var(--muted); } .eyebrow.red { color: var(--red); }
+  header .brand { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  header .mark { width: 10px; height: 34px; background: var(--amber); border-radius: 2px; }
+  header .links { margin-top: 12px; font-size: 14px; color: var(--muted); display: flex; gap: 16px; flex-wrap: wrap; }
+  a { color: var(--blueT); }
+  .grid { display: grid; grid-template-columns: minmax(300px, 370px) minmax(0, 1fr); gap: 24px; margin-top: 28px; align-items: start; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); }
+  form .panel { padding: 18px 18px 6px; }
+  fieldset { border: 0; padding: 0; margin: 0 0 16px; min-width: 0; }
+  legend { padding: 0; margin-bottom: 8px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; margin-bottom: 10px; }
+  .row.one { grid-template-columns: 1fr; } .row.three { grid-template-columns: 1fr 1fr 1fr; }
+  label.f { display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; font-size: 14px; color: var(--txt2); min-width: 0; }
+  label.f span.l { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  label.f small { color: var(--muted); font-size: 12px; }
+  input[type="number"], select { width: 100%; font: inherit; font-size: 15px; color: var(--txt); background: var(--card2); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font-variant-numeric: tabular-nums; }
+  input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  details.adv { border-top: 1px solid var(--line); margin-top: 6px; padding: 10px 0 8px; }
+  details.adv summary { cursor: pointer; font-size: 14px; color: var(--txt2); font-weight: 600; }
+  details.adv .row { margin-top: 12px; }
+  .note { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+  .results { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  /* ---- héroe: la noche de la batería ---- */
+  .hero { padding: 22px 24px; border-left: 6px solid var(--amber); display: flex; flex-direction: column; gap: 14px; }
+  .hero .headline { display: flex; align-items: baseline; gap: 14px 18px; flex-wrap: wrap; }
+  .hero .num.big { font-size: clamp(38px, 6vw, 60px); line-height: 1; color: var(--amberT); }
+  .hero .headline .txt { font-size: 17px; color: var(--txt); max-width: 52ch; flex: 1 1 280px; }
+  .hero .night { width: 100%; overflow-x: auto; }
+  .hero .night svg { display: block; width: 100%; min-width: 520px; height: auto; }
+  .steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 22px; }
+  @media (max-width: 640px) { .steps { grid-template-columns: 1fr; } }
+  .step h3 { color: var(--txt); margin-bottom: 4px; }
+  .step p { margin: 0; font-size: 15px; color: var(--txt2); }
+  svg text { font-family: "Source Sans 3", Calibri, system-ui, sans-serif; fill: var(--txt2); font-size: 12px; }
+  svg .gridl { stroke: var(--line); stroke-width: 1; }
+  svg .axis { stroke: var(--muted); stroke-width: 1; }
+  .legend { display: flex; gap: 8px 18px; flex-wrap: wrap; font-size: 14px; color: var(--txt2); margin-top: 6px; }
+  .legend i { display: inline-block; width: 22px; height: 3px; vertical-align: middle; margin-right: 6px; border-radius: 2px; }
+  .legend i.sq { height: 12px; width: 12px; border-radius: 2px; } .legend i.dot { height: 11px; width: 11px; border-radius: 50%; }
+  /* ---- las dos monedas ---- */
+  .compare { padding: 20px 24px; }
+  .cmp { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+  @media (max-width: 760px) { .cmp { grid-template-columns: 1fr; } }
+  .tile { background: var(--card2); border-radius: 8px; padding: 14px 16px; border-top: 4px solid var(--line); }
+  .tile.red { border-top-color: var(--red); } .tile.blue { border-top-color: var(--blue); } .tile.amber { border-top-color: var(--amber); }
+  .tile .sub { font-size: 13px; color: var(--muted); min-height: 2.6em; }
+  .tile .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+  .tile .coin .k { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .tile .coin .num { font-size: 28px; line-height: 1.1; margin-top: 2px; color: var(--txt); }
+  .tile .coin .u { font-size: 12px; color: var(--muted); }
+  .tile dl { display: grid; grid-template-columns: auto auto; gap: 2px 10px; margin: 12px 0 0; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .tile dt { color: var(--muted); } .tile dd { margin: 0; text-align: right; color: var(--txt); }
+  .gain { margin-top: 16px; padding: 12px 16px; background: var(--amberBg); border-radius: 8px; font-size: 15px; }
+  .gain strong { color: var(--amberT); }
+  .cambio { margin-top: 12px; padding: 12px 16px; background: var(--redBg); border-radius: 8px; font-size: 15px; }
+  .cambio strong { color: var(--red); }
+  .two { display: grid; grid-template-columns: 1fr; gap: 20px; }
+  .chartbox { padding: 20px 24px; min-width: 0; }
+  .chartbox svg { display: block; width: 100%; height: auto; }
+  .factors { padding: 20px 24px; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 10px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-weight: 600; color: var(--txt2); font-size: 13px; letter-spacing: .02em; }
+  td.r, th.r { text-align: right; white-space: nowrap; }
+  tr.rec td { background: var(--amberBg); }
+  .tablewrap { overflow-x: auto; }
+  .caveats { padding: 20px 24px; font-size: 14px; color: var(--txt2); }
+  .caveats p { margin: 8px 0 0; max-width: 80ch; }
+  .caveats summary { cursor: pointer; font-weight: 600; color: var(--txt); font-family: "Source Serif 4", Cambria, Georgia, serif; font-size: 18px; }
+  .aviso { padding: 12px 16px; border-radius: 8px; background: var(--redBg); color: var(--txt); font-size: 15px; border-left: 4px solid var(--red); }
+  footer { margin-top: 36px; font-size: 13px; color: var(--muted); max-width: 80ch; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><div class="mark"></div><h1>Calculadora de carga enchufable</h1></div>
+    <p class="lead">Para híbridos enchufables. En este coche cada decisión sobre la carga se mide en dos monedas: los puntos de capacidad que pierde la batería y los euros que cuesta la energía, porque lo que no entra por el enchufe lo pone la gasolina. Dime qué coche tienes, cuántos kilómetros haces, cómo cargas y qué pagas por la luz y la gasolina: te devuelvo a qué hora programar la carga, la profundidad y los ciclos de tu batería, cuántos kilómetros serán eléctricos, lo que cuesta cada rutina en las dos monedas y lo que vale un punto de tu batería. La profundidad de descarga entra en el término de uso con la ley que elijas (Naumann, Omar, Aquisgrán o sin efecto) y con la clase de celda. Para eléctricos puros, usa la <a id="linkLfp" href="https://juliocaa.github.io/calculadora-carga-lfp/">calculadora LFP</a> o la <a id="linkNmc" href="https://juliocaa.github.io/calculadora-carga-niquel/">calculadora de níquel</a>.</p>
+    <div class="links"><span>AutoIngenium · versión 3 · septiembre de 2026</span><a id="linkVideo" href="https://www.youtube.com/@autoingenium" target="_blank" rel="noopener">Vídeo que explica el método</a><a id="linkRepo" href="https://github.com/juliocaa/calculadora-carga-enchufable" target="_blank" rel="noopener">Código y modelo (GitHub)</a></div>
+  </header>
+
+  <div class="grid">
+    <form id="form" autocomplete="off" onsubmit="return false">
+      <div class="panel">
+        <fieldset>
+          <legend class="eyebrow">Tu coche</legend>
+          <div class="row one">
+            <label class="f" for="coche"><span class="l">Modelo</span><select id="coche"></select></label>
+          </div>
+          <div class="row">
+            <label class="f" for="kwh"><span class="l"><span id="lblKwh">Batería</span> <small>kWh</small></span><input id="kwh" type="number" min="3" max="60" step="0.1"></label>
+            <label class="f" for="suelo"><span class="l">Fin del modo eléctrico <small>%</small></span><input id="suelo" type="number" min="0" max="50" step="1"></label>
+          </div>
+          <div class="row">
+            <label class="f" for="consEv"><span class="l">Consumo eléctrico <small>kWh/100 km</small></span><input id="consEv" type="number" min="10" max="40" step="0.5"></label>
+            <label class="f" for="consHev"><span class="l">Consumo en híbrido <small>l/100 km</small></span><input id="consHev" type="number" min="3" max="15" step="0.1"></label>
+          </div>
+          <p class="note" id="notaCoche"></p>
+        </fieldset>
+        <fieldset>
+          <legend class="eyebrow">Tu uso</legend>
+          <div class="row">
+            <label class="f" for="kmSemana"><span class="l">Km por día, lunes a viernes</span><input id="kmSemana" type="number" min="0" max="600" step="1" value="70"></label>
+            <label class="f" for="kmFinde"><span class="l">Km por día, fin de semana</span><input id="kmFinde" type="number" min="0" max="600" step="1" value="70"></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend class="eyebrow">Tu carga</legend>
+          <div class="row">
+            <label class="f" for="potencia"><span class="l">Cargador de casa</span><select id="potencia">
+              <option value="2.3">2,3 kW (enchufe doméstico)</option>
+              <option value="3.7">3,7 kW (16 A)</option>
+              <option value="7.4" selected>7,4 kW (32 A)</option>
+              <option value="11">11 kW (trifásico)</option>
+            </select></label>
+            <label class="f" for="trabajo"><span class="l">¿Enchufe en el trabajo?</span><select id="trabajo">
+              <option value="no" selected>No</option>
+              <option value="gratis">Sí, gratuito</option>
+              <option value="pago">Sí, de pago</option>
+            </select></label>
+          </div>
+          <div class="row">
+            <label class="f" for="hLlegada"><span class="l">Hora de llegar a casa</span><input id="hLlegada" type="number" min="12" max="22" step="1" value="18"></label>
+            <label class="f" for="hSalida"><span class="l">Hora de salir por la mañana</span><input id="hSalida" type="number" min="4" max="11" step="1" value="8"></label>
+          </div>
+          <div class="row" id="filaTrabajo" hidden>
+            <label class="f" for="potenciaTrabajo"><span class="l">Potencia en el trabajo</span><select id="potenciaTrabajo">
+              <option value="2.3">2,3 kW</option><option value="3.7">3,7 kW</option><option value="7.4" selected>7,4 kW</option><option value="11">11 kW</option>
+            </select></label>
+            <label class="f" for="precioTrabajo"><span class="l">Precio en el trabajo <small>€/kWh</small></span><input id="precioTrabajo" type="number" min="0" max="1" step="0.01" value="0.20"></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend class="eyebrow red">Tus precios</legend>
+          <div class="row">
+            <label class="f" for="tarifa"><span class="l">Tarifa de la luz</span><select id="tarifa">
+              <option value="3p" selected>Tres periodos (2.0TD)</option>
+              <option value="unica">Precio único</option>
+            </select></label>
+            <label class="f" for="gasolina"><span class="l">Gasolina <small>€/l</small></span><input id="gasolina" type="number" min="0.8" max="3" step="0.01" value="1.92"></label>
+          </div>
+          <div class="row three" id="fila3p">
+            <label class="f" for="pPunta"><span class="l">Punta <small>€/kWh</small></span><input id="pPunta" type="number" min="0" max="1" step="0.001" value="0.199"></label>
+            <label class="f" for="pLlano"><span class="l">Llano</span><input id="pLlano" type="number" min="0" max="1" step="0.001" value="0.159"></label>
+            <label class="f" for="pValle"><span class="l">Valle</span><input id="pValle" type="number" min="0" max="1" step="0.001" value="0.119"></label>
+          </div>
+          <div class="row one" id="filaUnica" hidden>
+            <label class="f" for="pUnico"><span class="l">Precio único <small>€/kWh</small></span><input id="pUnico" type="number" min="0" max="1" step="0.001" value="0.139"></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend class="eyebrow">Dónde vive el coche</legend>
+          <div class="row">
+            <label class="f" for="clima"><span class="l">Clima <small>medias AEMET</small></span><select id="clima"></select></label>
+            <label class="f" for="ajusteT"><span class="l">Ajuste <small>°C, garaje o sol</small></span><input id="ajusteT" type="number" min="-5" max="8" step="1" value="0"></label>
+          </div>
+        </fieldset>
+        <details class="adv">
+          <summary>Método</summary>
+          <div class="row">
+            <label class="f" for="escala"><span class="l">Escala del modelo</span><select id="escala">
+              <option value="1" selected>Celda de laboratorio (×1)</option>
+              <option value="0.714">Corregida como el Model 3 LFP (÷1,4)</option>
+            </select></label>
+            <label class="f" for="variante"><span class="l">Curva de reposo (LFP)</span><select id="variante">
+              <option value="naumann" selected>Suave (Naumann 2018)</option>
+              <option value="alta">Penalización alta</option>
+            </select></label>
+          </div>
+          <div class="row">
+            <label class="f" for="ley"><span class="l">Profundidad de descarga (uso, LFP)</span><select id="ley">
+              <option value="naumann" selected>Cúbica de Naumann 2020 (central)</option>
+              <option value="plana">Sin efecto por kWh (Wang 2011)</option>
+              <option value="omar">Ley de potencia (Omar 2014)</option>
+              <option value="inversa">Vida en energía = 1/DoD (Aquisgrán)</option>
+            </select></label>
+            <label class="f" for="celda"><span class="l">Clase de celda (LFP)</span><select id="celda">
+              <option value="13273" selected>Celda del modelo: 13.000 ciclos</option>
+              <option value="5000">Blade según BYD: 5.000 ciclos</option>
+              <option value="2500">Extremo inferior de Sandia: 2.500</option>
+              <option value="9000">Extremo superior de Sandia: 9.000</option>
+            </select></label>
+          </div>
+          <div class="row">
+            <label class="f" for="topLfp"><span class="l">Indicador al 100 % = real (LFP) <small>%</small></span><input id="topLfp" type="number" min="85" max="100" step="1" value="100"></label>
+            <label class="f" for="escalaNi"><span class="l">Clase de celda (níquel, uso)</span><select id="escalaNi">
+              <option value="usabc" selected>Al objetivo USABC (β × 0,46)</option>
+              <option value="doble">El doble de vida que USABC (× 0,33)</option>
+              <option value="sanyo">Celda de Sanyo sin escalar (× 1)</option>
+              <option value="cero">Solo reposo (sin uso)</option>
+            </select></label>
+          </div>
+          <div class="row" id="filaNmc" hidden>
+            <label class="f" for="realLo"><span class="l">Indicador al 0 % = real <small>%</small></span><input id="realLo" type="number" min="0" max="40" step="1" value="20"></label>
+            <label class="f" for="realHi"><span class="l">Indicador al 100 % = real <small>%</small></span><input id="realHi" type="number" min="70" max="100" step="1" value="95"></label>
+          </div>
+          <p class="note">El modelo de celda (Naumann 2018 y 2020, Múnich) exageraba la pérdida de los Model 3 LFP suecos en torno a un factor 1,4; no he encontrado datos de flota de enchufables de ferrofosfato. La penalización alta supone una velocidad de reposo al 100 % de 2,2 veces la del 50 % (orden de Keil 2016 y Zsoldos 2024). La ley de profundidad cambia cuánto desgasta por kWh un ciclo parcial frente a uno completo (todas coinciden en el ciclo completo); la clase de celda son los ciclos completos hasta perder el 20 %, a 25 °C y 0,5 C. En los enchufables de níquel el reposo es el de Schmalstieg 2014 sobre la ventana real supuesta, y el uso, la β de Schmalstieg (lineal en la profundidad) escalada a una celda que cumpla justo el objetivo USABC de enchufable (5.000 ciclos de una ventana del 70 % hasta el 80 %).</p>
+        </details>
+      </div>
+    </form>
+
+    <section class="results" aria-live="polite">
+      <div class="panel hero">
+        <div>
+          <div class="eyebrow">Tu rutina · a qué hora se llena la batería</div>
+          <div class="headline"><div class="num big" id="horaTxt">5:50</div><div class="txt" id="horaSub"></div></div>
+        </div>
+        <div class="night"><svg id="noche" viewBox="0 0 760 250" role="img" aria-label="Estado de carga de la batería entre la llegada a casa y la salida, cargando al enchufar y con la carga programada"></svg></div>
+        <div class="legend"><span><i style="background:var(--blue)"></i>Carga nada más enchufar</span><span><i style="background:var(--amber)"></i>Tu rutina</span><span><i class="sq" style="background:var(--punta)"></i>Punta</span><span><i class="sq" style="background:var(--llano)"></i>Llano</span><span><i class="sq" style="background:var(--valle)"></i>Valle</span></div>
+        <div class="steps">
+          <div class="step"><h3>Cómo programarlo</h3><p id="como"></p></div>
+          <div class="step"><h3>Cuánto cargar</h3><p id="cuanto"></p></div>
+          <div class="step"><h3>El modo híbrido</h3><p id="hibrido"></p></div>
+          <div class="step"><h3>Cargar fuera de casa</h3><p id="fuera"></p></div>
+          <div class="step"><h3>La profundidad del ciclo</h3><p id="profundidad"></p></div>
+          <div class="step"><h3>La reserva</h3><p id="reserva"></p></div>
+        </div>
+      </div>
+
+      <div id="avisoNmc" class="aviso" hidden></div>
+
+      <div class="panel compare">
+        <div class="eyebrow muted">Las dos monedas · batería a los diez años y energía al año</div>
+        <div class="cmp">
+          <div class="tile red"><div class="sub">Sin enchufarlo nunca</div><div class="pair"><div class="coin"><div class="k">Batería</div><div class="num" id="capN">—</div><div class="u" id="capNu"></div></div><div class="coin"><div class="k">Energía</div><div class="num" id="eurN">—</div><div class="u">al año</div></div></div><dl><dt>En diez años</dt><dd id="e10N"></dd><dt>Km eléctricos</dt><dd id="evN"></dd></dl></div>
+          <div class="tile blue"><div class="sub">Al 100 %, nada más enchufar</div><div class="pair"><div class="coin"><div class="k">Batería</div><div class="num" id="capA">—</div><div class="u" id="capAu"></div></div><div class="coin"><div class="k">Energía</div><div class="num" id="eurA">—</div><div class="u">al año</div></div></div><dl><dt>En diez años</dt><dd id="e10A"></dd><dt>Km eléctricos</dt><dd id="evA"></dd></dl></div>
+          <div class="tile amber"><div class="sub" id="tituloRec">Tu rutina</div><div class="pair"><div class="coin"><div class="k">Batería</div><div class="num" id="capR">—</div><div class="u" id="capRu"></div></div><div class="coin"><div class="k">Energía</div><div class="num" id="eurR">—</div><div class="u">al año</div></div></div><dl><dt>En diez años</dt><dd id="e10R"></dd><dt>Km eléctricos</dt><dd id="evR"></dd></dl></div>
+        </div>
+        <div class="gain" id="ganancia"></div>
+        <div class="cambio" id="cambio"></div>
+      </div>
+
+      <div class="two">
+        <div class="panel chartbox">
+          <div class="eyebrow muted">El mapa de las rutinas · abajo y a la izquierda es mejor</div>
+          <svg id="mapa" viewBox="0 0 760 340" role="img" aria-label="Rutinas de carga situadas por su coste anual y por la pérdida de capacidad a diez años"></svg>
+          <p class="note" id="notaMapa"></p>
+        </div>
+        <div class="panel chartbox">
+          <div class="eyebrow muted" id="tituloCurva">Capacidad a lo largo de quince años</div>
+          <svg id="chart" viewBox="0 0 760 300" role="img" aria-label="Capacidad restante de la batería a lo largo de quince años según la rutina"></svg>
+          <div class="legend"><span><i style="background:var(--red)"></i>Sin enchufarlo</span><span><i style="background:var(--blue)"></i>Al enchufar</span><span><i style="background:var(--amber)"></i>Tu rutina</span></div>
+        </div>
+      </div>
+
+      <div class="panel factors">
+        <div class="eyebrow muted">Todas las rutinas, en las dos monedas</div>
+        <div class="tablewrap"><table id="tabla"><thead><tr><th>Rutina</th><th class="r" id="thPerdida">Pérdida a 10 años</th><th class="r">Reposo</th><th class="r">Uso</th><th class="r">Ciclo diario</th><th class="r">Ciclos eq./año</th><th class="r">Km eléctricos</th><th class="r">€ al año</th><th class="r">€ en 10 años</th><th class="r">€ del primer año por punto conservado</th></tr></thead><tbody></tbody></table></div>
+        <p class="note" id="notaTabla"></p>
+      </div>
+
+      <details class="panel caveats">
+        <summary>Método, fuentes y cautelas</summary>
+        <p><strong>Modelo.</strong> Para las baterías de ferrofosfato (BYD DM-i), envejecimiento en reposo y en uso de una celda comercial LFP según Naumann et al. (2018, <em>J. Energy Storage</em> 17, 153) y Naumann, Spingler y Jossen (2020, <em>J. Power Sources</em> 451, 227666), con los parámetros publicados (verificados en SimSES, TUM). Es el modelo de los vídeos «¿Cargar al 80 % o al 100 %?» y «A qué porcentaje cargar una batería LFP». La simulación recorre hora a hora una semana tipo: cada trayecto se hace en eléctrico hasta que el indicador llega al nivel en que termina el modo eléctrico (25 % en los BYD DM-i) y después en híbrido; la carga se sitúa a la hora que corresponde a cada rutina; y el reposo se acumula con la temperatura media de cada mes (AEMET, 1981–2010). Los euros se calculan año a año con la autonomía eléctrica que va quedando, sin actualizar precios.</p>
+        <p><strong>Las dos monedas.</strong> Un punto de capacidad es un 1 % de la batería; su valor en euros es la gasolina que sustituye: los metros de autonomía eléctrica que representa, por la diferencia de coste entre el kilómetro con gasolina y el eléctrico, los días en que la batería se agota. La última columna de la tabla divide lo que cuesta de más cada rutina el primer año por los puntos de batería que conserva a diez años respecto a tu rutina; como el sobrecoste crece al envejecer la batería, la media de los diez años es algo mayor.</p>
+        <p><strong>Hipótesis declaradas.</strong> En modo híbrido la batería sigue trabajando en ciclos muy cortos: se supone, a falta de datos publicados, que un tercio de la energía de tracción pasa por ella en ciclos del 3 % a 1 C. La tasa C del ciclo diario se calcula con la batería de cada coche (carga en alterna y descarga a 50 km/h de media). Rendimiento de carga, 90 %. Reparto del recorrido diario: 55 % por la mañana y 45 % por la tarde. El enchufe del trabajo carga al llegar, sin programación.</p>
+        <p><strong>Escala y cautelas.</strong> La celda del modelo (Sony/Murata de 2015) no es una Blade; aplicado a los Model 3 LFP suecos (Carla/AVILOO, 2026), el modelo exageraba la pérdida en torno a un factor 1,4, y no he encontrado datos de flota de enchufables de ferrofosfato. Las celdas LFP comerciales ensayadas por Sandia (Preger et al., 2020) soportaron entre 2.500 y 9.000 ciclos completos equivalentes (energía ÷ capacidad nominal) hasta el 80 %: en un enchufable de batería pequeña, diez años de uso alcanzan el extremo inferior de ese intervalo; con el selector de clase de celda puedes ver el efecto. De una variante a otra se mantienen el signo y el orden de las diferencias entre rutinas; su tamaño depende de la celda.</p>
+        <p><strong>La profundidad de descarga y la clase de celda (novedad de la versión 3).</strong> El término de uso depende de la energía que atraviesa la batería (ciclos completos equivalentes) y de la profundidad de cada ciclo. Con la cúbica medida por Naumann (2020) en la celda LFP del modelo, un ciclo del 70 % desgasta por kWh un 19 % menos que uno completo y la curva es casi plana entre el 40 y el 80 %; Wang (2011) y Peterson (2010) no encontraron efecto por Ah en celdas de ferrofosfato; Omar (2014) midió 3.221 ciclos al 80 % de profundidad y 34.957 al 20 % (×10,9 en ciclos, ×2,7 en energía); Ecker y Schmalstieg (2014) encontraron en una celda de níquel energía hasta el fin de vida inversa a la profundidad. Las cuatro leyes coinciden en el ciclo completo. La clase de celda escala el término de uso: la del modelo soporta 13.270 ciclos completos hasta perder el 20 % (0,5 C, 25 °C); BYD dice que la Blade «supera los 5.000» sin publicar el criterio (× 1,63 si se lee como 5.000 hasta el 80 %); las celdas LFP de Sandia (Preger 2020), entre 2.500 y 9.000. El ajuste «indicador al 100 % = real» permite simular un margen superior oculto, como el del Volt.</p>
+        <p><strong>Enchufables de níquel.</strong> Reposo con Schmalstieg et al. (2014, <em>J. Power Sources</em> 257, 325) y la tensión en vacío de Ecker et al. (2014), sobre la ventana real supuesta. Uso con la β de Schmalstieg (lineal en la profundidad, con la tensión media del ciclo) escalada a una clase de celda: su celda de eléctrico puro, aplicada tal cual, da para los cerca de 2.900 ciclos completos que un enchufable hace en diez años pérdidas del orden del 40 %, muy por encima de lo que el ADAC y AVILOO miden; la escala por defecto (× 0,46) es la de una celda que cumpla justo el objetivo USABC/DOE para enchufables (5.000 ciclos profundos de una ventana del 70 % hasta el 80 %), y a 150.000 km deja el coche en torno al 80 %, entre los Mitsubishi y los Mercedes que midió el ADAC. Es una hipótesis declarada. Los fabricantes ocultan parte de la batería tras el indicador (entre el 20 y el 25 %) y no publican cómo la reparten; se supone que el 100 % del indicador es el 95 % real, y puedes cambiarlo. Datos de flota: ADAC y AVILOO (noviembre de 2025), 28.500 mediciones.</p>
+        <p><strong>Datos de los coches y precios.</strong> Capacidades, consumos y potencias de carga tomados de los fabricantes, km77 y la prensa especializada en septiembre de 2026; son aproximados y puedes editarlos. Tarifa de tres periodos de referencia: 0,199 / 0,159 / 0,119 €/kWh (Enérgya VM, vía Xataka, 2-9-2026); gasolina 95: 1,925 €/l el 26-9-2026 (Ministerio para la Transición Ecológica; aquí, 1,92), con la rebaja fiscal de 5 c€/l vigente hasta el 30-9-2026.</p>
+      </details>
+    </section>
+  </div>
+
+  <footer>Calculadora de AutoIngenium, sin patrocinio ni relación con ningún fabricante. El resultado es una estimación con modelos publicados y no una predicción para un coche concreto. Los cálculos se hacen en tu navegador; no se envía ningún dato.</footer>
+</div>
+
+<script>// Modelo de un híbrido enchufable en dos monedas (puntos de batería y euros). Versión JavaScript idéntica a modelo_phev.py
+// (validada con validar.js). Versión 3: leyes de profundidad de descarga, clase de celda, margen superior y uso del níquel.
+// LFP: Naumann et al. 2018 (reposo) y 2020 (uso). Níquel: Schmalstieg et al. 2014 (reposo y uso, este escalado) con la tensión
+// en vacío de Ecker et al. 2014. Sin dependencias; se ejecuta en el navegador. Licencia MIT.
+(function (root) {
+  const R_GAS = 8.314, K_REF = 1.2571e-5, EA = 17126.0;
+  const DIAS_MES = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const CLIMAS = {
+    "A Coruña": [10.8, 11.1, 12.4, 13.0, 15.0, 17.4, 19.0, 19.6, 18.6, 16.1, 13.3, 11.5],
+    "Santander": [9.7, 9.8, 11.3, 12.4, 15.1, 17.8, 19.8, 20.3, 18.6, 16.1, 12.5, 10.5],
+    "Oviedo": [8.3, 8.7, 10.5, 11.3, 13.9, 16.7, 18.7, 19.1, 17.6, 14.6, 10.9, 8.9],
+    "Bilbao": [9.3, 9.7, 11.5, 12.6, 15.7, 18.4, 20.4, 20.9, 19.2, 16.4, 12.4, 9.9],
+    "León": [3.2, 4.7, 7.6, 9.0, 12.6, 17.1, 19.8, 19.6, 16.5, 11.7, 7.0, 4.2],
+    "Valladolid": [4.2, 5.9, 9.0, 10.7, 14.5, 19.3, 22.3, 22.1, 18.5, 13.2, 7.9, 5.0],
+    "Madrid": [6.3, 7.9, 11.2, 12.9, 16.7, 22.2, 25.6, 25.1, 20.9, 15.1, 9.9, 6.9],
+    "Zaragoza": [6.6, 8.2, 11.6, 13.8, 18.0, 22.6, 25.3, 25.0, 21.2, 16.2, 10.6, 7.0],
+    "Barcelona": [9.2, 9.9, 11.8, 13.7, 16.9, 20.9, 23.9, 24.4, 21.7, 17.8, 13.0, 10.0],
+    "Valencia": [11.8, 12.5, 14.4, 16.2, 19.0, 22.9, 25.6, 26.1, 23.5, 19.7, 15.3, 12.6],
+    "Palma": [9.5, 9.8, 11.3, 13.6, 17.5, 21.7, 24.8, 25.1, 22.2, 18.5, 13.7, 10.8],
+    "Murcia": [10.6, 12.2, 14.3, 16.5, 20.0, 24.2, 27.2, 27.6, 24.2, 19.8, 14.6, 11.5],
+    "Málaga": [12.1, 12.9, 14.7, 16.3, 19.3, 23.0, 25.5, 26.0, 23.5, 19.5, 15.7, 13.2],
+    "Sevilla": [10.9, 12.5, 15.6, 17.3, 20.7, 25.1, 28.2, 27.9, 25.0, 20.2, 15.1, 11.9],
+    "Tenerife": [18.2, 18.3, 19.0, 19.7, 21.0, 22.9, 25.0, 25.5, 24.9, 23.4, 21.3, 19.4],
+    "25 °C constante": [25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25],
+  };
+
+  // ---------- LFP (Naumann)
+  function kSocNaumann(s) { return 2.8575 * Math.pow(s - 0.5, 3) + 0.60225; }
+  function kSoc(s, variante) {
+    let k = kSocNaumann(s);
+    if (variante === "alta" && s > 0.7) { const k50 = kSocNaumann(0.5), k70 = kSocNaumann(0.7); k = k70 + (s - 0.7) / 0.3 * (2.2 * k50 - k70); }
+    return k;
+  }
+  function kCal(s, TC, variante) { const T = TC + 273.15; return K_REF * Math.exp(-EA / R_GAS * (1 / T - 1 / 298.15)) * kSoc(s, variante); }
+  const K_DOD_1 = 4.0253 * Math.pow(0.4, 3) + 1.0923; // 1,3499
+  function kC(c) { return 0.0630 * c + 0.0971; }
+  function kDodNaumann(d) { return 4.0253 * Math.pow(d - 0.6, 3) + 1.0923; }
+  function kDod(d, ley) {
+    d = Math.max(1e-6, Math.min(1, d)); ley = ley || "naumann";
+    if (ley === "naumann") return kDodNaumann(d);
+    if (ley === "plana") return d >= 0.10 ? K_DOD_1 : kDodNaumann(d);
+    if (ley === "omar") return K_DOD_1 * Math.pow(d, 0.36);
+    if (ley === "inversa") return K_DOD_1 * Math.sqrt(d);
+    throw new Error("ley " + ley);
+  }
+  function kCyc(c, dod, ley) { return kC(c) * kDod(dod, ley) / 100; }
+  function fecHasta(perdida, c, dod, ley) { return Math.pow((perdida == null ? 0.20 : perdida) / kCyc(c == null ? 0.5 : c, dod == null ? 1 : dod, ley), 2); }
+  const N80_NAUMANN = fecHasta();
+  const CELDAS = { naumann: N80_NAUMANN, blade5000: 5000, sandia: 2500 };
+  function escalaUso(celda) { const n80 = (typeof celda === "number") ? celda : (CELDAS[celda || "naumann"] || N80_NAUMANN); return Math.sqrt(N80_NAUMANN / n80); }
+
+  // ---------- Níquel (Schmalstieg), solo reposo
+  const SOC_PTS = [0, 0.10, 0.20, 0.30, 0.50, 0.60, 0.70, 0.80, 0.85, 0.90, 0.95, 1.00];
+  const V_PTS = [3.331, 3.494, 3.578, 3.626, 3.699, 3.782, 3.869, 3.964, 4.018, 4.072, 4.117, 4.162];
+  function ocv(s) {
+    if (s <= 0) return V_PTS[0];
+    if (s >= 1) return V_PTS[V_PTS.length - 1];
+    let i = 1; while (SOC_PTS[i] < s) i++;
+    return V_PTS[i - 1] + (V_PTS[i] - V_PTS[i - 1]) * (s - SOC_PTS[i - 1]) / (SOC_PTS[i] - SOC_PTS[i - 1]);
+  }
+  function alphaNmc(s, TC) { return (7.543 * ocv(s) - 23.75) * 1e6 * Math.exp(-6976.0 / (TC + 273.15)); }
+  const AH_CELDA = 2.05;
+  function betaNmc(v, ddod) { return 7.348e-3 * Math.pow(v - 3.667, 2) + 7.6e-4 + 4.081e-3 * ddod; }
+  function escalaNiUsabc(ventana, ciclos, perdida, socMedio) {
+    ventana = ventana == null ? 0.70 : ventana; ciclos = ciclos == null ? 5000 : ciclos; perdida = perdida == null ? 0.20 : perdida; socMedio = socMedio == null ? 0.5 : socMedio;
+    return perdida / (betaNmc(ocv(socMedio), ventana) * Math.sqrt(ciclos * ventana * 2 * AH_CELDA));
+  }
+  const ESCALA_NI_USABC = escalaNiUsabc();
+
+  function temperaturaHoraria(clima, off) {
+    const t = CLIMAS[clima], out = new Float64Array(8760); let i = 0;
+    for (let m = 0; m < 12; m++) for (let h = 0; h < 24 * DIAS_MES[m]; h++) out[i++] = t[m] + (off || 0);
+    return out;
+  }
+
+  // ---------- Tarifa de tres periodos (2.0TD)
+  function periodo(d, h) { if (d >= 5 || h < 8) return "valle"; if ((h >= 10 && h < 14) || (h >= 18 && h < 22)) return "punta"; return "llano"; }
+  function precioHora(d, h, precios) { return (typeof precios === "number") ? precios : precios[periodo(d, h)]; }
+
+  // ---------- Perfil semanal (idéntico a simular_perfil)
+  function simularPerfil(coche, km, potenciaKw, o) {
+    o = o || {};
+    const objetivo = o.objetivo == null ? 1.0 : o.objetivo, programada = !!o.programada, cadaN = o.cada_n_dias || 1, nunca = !!o.nunca;
+    const ef = o.eficiencia == null ? 0.9 : o.eficiencia, hS = o.h_salida == null ? 8 : o.h_salida, hR = o.h_regreso == null ? 18 : o.h_regreso;
+    const hE = o.h_enchufe == null ? 19 : o.h_enchufe, reparto = o.reparto == null ? 0.55 : o.reparto, fHev = o.f_hev == null ? 1 / 3 : o.f_hev;
+    const semanas = o.semanas || 4, capRel = o.capacidad_rel == null ? 1.0 : o.capacidad_rel;
+    const trabajo = o.trabajo || null, semanal100 = o.semanal_100 == null ? null : o.semanal_100, inicioFijo = o.inicio_fijo == null ? null : o.inicio_fijo;
+    const top = coche.top == null ? 1.0 : coche.top;
+    const kwh = coche.kwh * top * capRel, suelo = o.suelo_ev == null ? coche.suelo : o.suelo_ev, cons = coche.cons_ev;
+    const pCasa = Math.min(potenciaKw, coche.p_ca) * ef / kwh;
+    const n = 168 * semanas, soc = new Float64Array(n), red = new Float64Array(168), redTrabajo = new Float64Array(168);
+    let s = nunca ? suelo : objetivo, carga = null, kmEv = 0, kmHev = 0, fecProf = 0, fecMicro = 0;
+    const tramos = [];
+    function trayecto(kmT, ultimo) {
+      const e = kmT * cons / kwh, disp = Math.max(0, s - suelo);
+      if (e <= disp + 1e-12) { s -= e; if (ultimo) { kmEv += kmT; fecProf += e * top * capRel; } }
+      else {
+        const kEv = disp * kwh / cons; s -= disp;
+        if (ultimo) { kmEv += kEv; kmHev += kmT - kEv; fecProf += disp * top * capRel; fecMicro += (kmT - kEv) * cons * fHev / coche.kwh; }
+      }
+    }
+    for (let t = 0; t < n; t++) {
+      const d = Math.floor(t / 24) % 7, h = t % 24, ultimo = t >= n - 168;
+      if (h === hS) { if (carga !== null && carga[3] === "casa") carga = null; trayecto(km[d] * reparto, ultimo); }
+      if (trabajo !== null && d < 5 && h === (trabajo.h_ini == null ? hS + 1 : trabajo.h_ini) && s < 1 - 1e-9) {
+        const pT = Math.min(trabajo.potencia, coche.p_ca) * ef / kwh;
+        carga = [1.0, t, pT, "trabajo"];
+        if (ultimo) tramos.push([s, 1.0, pT * top * capRel]);
+      }
+      if (h === hR) {
+        if (carga !== null && carga[3] === "trabajo") { if (ultimo && tramos.length) tramos[tramos.length - 1][1] = s; carga = null; }
+        trayecto(km[d] * (1 - reparto), ultimo);
+      }
+      if (h === hE && !nunca) {
+        let diaCarga = (d % cadaN === 0), obj = objetivo, prog = programada;
+        if (semanal100 !== null && d === semanal100) { diaCarga = true; obj = 1.0; prog = true; }
+        if (diaCarga && obj > s + 1e-9) {
+          const horas = (obj - s) / pCasa, fin = t + (24 - hE) + hS;
+          let ini = prog ? Math.max(t, fin - horas) : t;
+          if (inicioFijo !== null && !prog) ini = t + ((((inicioFijo - hE) % 24) + 24) % 24);
+          carga = [obj, ini, pCasa, "casa"];
+          if (ultimo) tramos.push([s, obj, pCasa * top * capRel]);
+        }
+      }
+      if (carga !== null) {
+        const obj = carga[0], ini = carga[1], p = carga[2], lugar = carga[3];
+        if (t + 1 > ini) {
+          const paso = p * Math.min(1, t + 1 - ini), sNew = Math.min(obj, s + paso);
+          if (ultimo) { const eRed = (sNew - s) * kwh / ef; if (lugar === "casa") red[t % 168] += eRed; else redTrabajo[t % 168] += eRed; }
+          s = sNew;
+          if (s >= obj - 1e-9) carga = null;
+        }
+      }
+      soc[t] = s;
+    }
+    return { soc: soc.slice(n - 168), km_ev: kmEv, km_hev: kmHev, fec_prof: fecProf, fec_micro: fecMicro, red: red, red_trabajo: redTrabajo,
+             tramos: tramos.filter(x => x[1] > x[0] + 1e-9), top: top };
+  }
+
+  // ---------- Envejecimiento LFP
+  function envejecer(coche, perfil, clima, o) {
+    o = o || {};
+    const anos = o.anos || 15, variante = o.variante || "naumann", vMedia = o.v_media || 50, cMicro = o.c_micro || 1.0, dodMicro = o.dod_micro || 0.03;
+    const ley = o.ley || "naumann", esc = escalaUso(o.celda == null ? "naumann" : o.celda), top = perfil.top == null ? (coche.top == null ? 1 : coche.top) : perfil.top;
+    const T = temperaturaHoraria(clima, o.offset_T || 0), nH = 8760, socSem = new Float64Array(168);
+    for (let h = 0; h < 168; h++) socSem[h] = perfil.soc[h] * top;
+    const ks = new Float64Array(nH);
+    const socH = new Float64Array(nH);
+    for (let h = 0; h < nH; h++) socH[h] = socSem[h % 168];
+    if (o.parada) { let h0 = 0; for (let m = 0; m < 7; m++) h0 += 24 * DIAS_MES[m]; for (let h = h0; h < h0 + 24 * o.parada.dias && h < nH; h++) socH[h] = o.parada.soc * top; }
+    for (let h = 0; h < nH; h++) ks[h] = kCal(socH[h], T[h], variante);
+    const cDesc = coche.cons_ev * vMedia / coche.kwh;
+    const fecProfAno = perfil.fec_prof * 365 / 7, fecMicroAno = perfil.fec_micro * 365 / 7;
+    let den = 0; for (const tr of perfil.tramos) den += tr[1] - tr[0];
+    let k2Ano = 0, sw = 0, sdod = 0, sc = 0;
+    for (const tr of perfil.tramos) {
+      const w = (tr[1] - tr[0]) * top, c = 0.5 * (tr[2] + cDesc);
+      k2Ano += den > 0 ? Math.pow(kCyc(c, w, ley), 2) * fecProfAno * (tr[1] - tr[0]) / den : 0;
+      sw += w; sdod += w * w; sc += c * w;
+    }
+    k2Ano += Math.pow(kCyc(cMicro, dodMicro, ley), 2) * fecMicroAno;
+    k2Ano *= esc * esc;
+    const fecAno = fecProfAno + fecMicroAno;
+    const res = { anos: [], total: [], cal: [], cyc: [] };
+    let Q = 0;
+    for (let a = 1; a <= anos; a++) {
+      for (let h = 0; h < nH; h++) { const k = ks[h]; const tv = Q > 0 ? (Q / k) * (Q / k) : 0; Q = k * Math.sqrt(tv + 3600); }
+      const Qc = Math.sqrt(k2Ano * a);
+      res.anos.push(a); res.cal.push(Q); res.cyc.push(Qc); res.total.push(Q + Qc);
+    }
+    let h95 = 0, smin = 1, smax = 0, sm = 0;
+    for (let h = 0; h < 168; h++) { const sd = perfil.soc[h]; if (sd >= 0.95) h95++; if (socSem[h] < smin) smin = socSem[h]; if (socSem[h] > smax) smax = socSem[h]; sm += socSem[h]; }
+    res.h_sem_95 = h95; res.soc_min = smin; res.soc_max = smax; res.soc_medio = sm / 168;
+    res.fec_prof_ano = fecProfAno; res.fec_micro_ano = fecMicroAno; res.fec_ano = fecAno; res.escala_uso = esc;
+    res.dod = sw > 0 ? sdod / sw : 0; res.c_eff = sw > 0 ? sc / sw : cDesc;
+    return res;
+  }
+
+  // ---------- Reposo de una batería de níquel (perfil de SOC real de la celda)
+  function envejecerNmcReposo(socReal, clima, anos, offT) {
+    const T = temperaturaHoraria(clima, offT || 0), nH = 8760, al = new Float64Array(nH);
+    for (let h = 0; h < nH; h++) al[h] = alphaNmc(socReal[h % 168], T[h]);
+    const out = []; let Q = 0;
+    for (let a = 1; a <= (anos || 15); a++) {
+      for (let h = 0; h < nH; h++) { const x = al[h]; const tv = Q > 0 ? Math.pow(Q / x, 1 / 0.75) : 0; Q = x * Math.pow(tv + 1 / 24, 0.75); }
+      out.push(Q);
+    }
+    return out;
+  }
+
+  // ---------- Uso de una batería de níquel (β de Schmalstieg sobre la ventana real, escalada a una clase de celda)
+  function usoNmc(perfil, kwhUtil, kwhBruta, lo, hi, anos, escala) {
+    anos = anos || 15; escala = escala == null ? ESCALA_NI_USABC : escala;
+    const r = hi - lo, fecProfAno = perfil.fec_prof * 365 / 7 * kwhUtil / kwhBruta, fecMicroAno = perfil.fec_micro * 365 / 7 * kwhUtil / kwhBruta;
+    let den = 0; for (const tr of perfil.tramos) den += tr[1] - tr[0];
+    let b2 = 0, sw = 0, sdod = 0, sv = 0;
+    for (const tr of perfil.tramos) {
+      const ddod = (tr[1] - tr[0]) * r, v = ocv(lo + 0.5 * (tr[0] + tr[1]) * r), bb = betaNmc(v, ddod);
+      b2 += den > 0 ? bb * bb * fecProfAno * (tr[1] - tr[0]) / den : 0;
+      sw += ddod; sdod += ddod * ddod; sv += v * ddod;
+    }
+    b2 += Math.pow(betaNmc(ocv(lo), 0.03), 2) * fecMicroAno;
+    const out = []; for (let a = 1; a <= anos; a++) out.push(escala * Math.sqrt(b2 * 2 * AH_CELDA * a));
+    return { curva: out, fec_ano: fecProfAno + fecMicroAno, fec_prof_ano: fecProfAno, ddod: sw > 0 ? sdod / sw : 0, v_avg: sw > 0 ? sv / sw : ocv(lo) };
+  }
+
+  // ---------- Euros
+  function eurosSemana(coche, perfil, precios, precioGasolina, precioTrabajo) {
+    let eCasa = 0, kwhCasa = 0, kwhTrab = 0;
+    for (let i = 0; i < 168; i++) { if (perfil.red[i] > 0) { eCasa += perfil.red[i] * precioHora(Math.floor(i / 24), i % 24, precios); kwhCasa += perfil.red[i]; } kwhTrab += perfil.red_trabajo[i]; }
+    const eTrab = kwhTrab * (precioTrabajo || 0), litros = perfil.km_hev * coche.cons_hev;
+    return { casa: eCasa, trabajo: eTrab, gasolina: litros * precioGasolina, litros: litros, kwh_casa: kwhCasa, kwh_trabajo: kwhTrab, total: eCasa + eTrab + litros * precioGasolina };
+  }
+
+  // ---------- Simulación completa. o.quimica === "NMC": solo reposo (Schmalstieg) con la ventana real [o.real_lo, o.real_hi]
+  function simular(coche, km, potenciaKw, o) {
+    o = o || {};
+    const anos = o.anos || 15, clima = o.clima || "Madrid";
+    const precios = o.precios == null ? { punta: 0.199, llano: 0.159, valle: 0.119 } : o.precios;
+    const gas = o.precio_gasolina == null ? 1.92 : o.precio_gasolina, pTrab = o.precio_trabajo || 0;
+    const perfil = simularPerfil(coche, km, potenciaKw, o);
+    let res;
+    if (coche.quimica === "NMC") {
+      const lo = coche.real_lo, hi = coche.real_hi, real = new Float64Array(168);
+      for (let h = 0; h < 168; h++) real[h] = lo + perfil.soc[h] * (hi - lo);
+      const cal = envejecerNmcReposo(real, clima, anos, o.offset_T || 0);
+      const escNi = o.escala_ni == null ? ESCALA_NI_USABC : o.escala_ni;
+      const u = usoNmc(perfil, coche.kwh, coche.kwh_bruta || coche.kwh / (hi - lo), lo, hi, anos, escNi);
+      res = { anos: cal.map((_, i) => i + 1), total: cal.map((c, i) => c + u.curva[i]), cal: cal, cyc: u.curva, solo_reposo: escNi === 0 };
+      let h95 = 0; for (let h = 0; h < 168; h++) if (perfil.soc[h] >= 0.95) h95++;
+      res.h_sem_95 = h95; res.fec_prof_ano = u.fec_prof_ano; res.fec_micro_ano = u.fec_ano - u.fec_prof_ano; res.fec_ano = u.fec_ano; res.dod = u.ddod; res.v_avg = u.v_avg;
+    } else {
+      res = envejecer(coche, perfil, clima, o);
+    }
+    const e0 = eurosSemana(coche, perfil, precios, gas, pTrab);
+    res.perfil = perfil;
+    res.euros_ano_nueva = {}; for (const k in e0) res.euros_ano_nueva[k] = e0[k] * 365 / 7;
+    res.km_ev_ano_nueva = perfil.km_ev * 365 / 7; res.km_hev_ano_nueva = perfil.km_hev * 365 / 7;
+    res.euros_ano = []; res.km_ev_ano = []; res.km_hev_ano = [];
+    const escala = o.escala == null ? 1 : o.escala;
+    for (let a = 1; a <= anos; a++) {
+      const media = 0.5 * ((a > 1 ? res.total[a - 2] : 0) + res.total[a - 1]) * escala;
+      const oa = Object.assign({}, o, { capacidad_rel: 1 - media });
+      const pa = simularPerfil(coche, km, potenciaKw, oa), ea = eurosSemana(coche, pa, precios, gas, pTrab);
+      res.euros_ano.push(ea.total * 365 / 7); res.km_ev_ano.push(pa.km_ev * 365 / 7); res.km_hev_ano.push(pa.km_hev * 365 / 7);
+    }
+    return res;
+  }
+
+  function anosHasta(total, umbral) {
+    const n = total.length;
+    if (total[n - 1] < umbral) return n * Math.pow(umbral / total[n - 1], 2);
+    let i = 0; while (i < n && total[i] < umbral) i++;
+    if (i === 0) return umbral / total[0];
+    return i + (umbral - total[i - 1]) / (total[i] - total[i - 1]);
+  }
+
+  const api = { CLIMAS, kSoc, kCal, kCyc, kDod, kC, escalaUso, N80_NAUMANN, ocv, alphaNmc, betaNmc, ESCALA_NI_USABC, periodo, precioHora, simularPerfil, envejecer, envejecerNmcReposo, usoNmc, eurosSemana, simular, anosHasta };
+  if (typeof module !== "undefined" && module.exports) module.exports = api; else root.ModeloPHEV = api;
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
+<script>(function () {
+  const M = window.ModeloPHEV;
+  // ---------- Enchufables a la venta en España. LFP: kwh = capacidad nominal y «suelo» = nivel del indicador al que termina el modo
+  // eléctrico. NMC: kwh = capacidad útil (la que ve el indicador) y [lo, hi] = ventana real supuesta de la celda. Datos aproximados.
+  const COCHES = [
+    { id: "atto2b", n: "BYD Atto 2 DM-i Boost (18 kWh)", q: "LFP", kwh: 18.0, suelo: 25, cons: 18.0, hev: 5.5, pca: 6.6, nota: "Blade de ferrofosfato. El modo eléctrico usa del 100 al 25 % del indicador (13,5 kWh); sin carga rápida. Autonomía eléctrica real ≈ 70–75 km (km77, agosto de 2026)." },
+    { id: "atto2a", n: "BYD Atto 2 DM-i Active (7,8 kWh)", q: "LFP", kwh: 7.8, suelo: 25, cons: 17.5, hev: 5.5, pca: 3.3, nota: "Blade de ferrofosfato; carga en alterna a 3,3 kW. Autonomía eléctrica homologada: 40 km." },
+    { id: "sealub", n: "BYD Seal U DM-i Boost (18,3 kWh)", q: "LFP", kwh: 18.3, suelo: 25, cons: 20.0, hev: 6.5, pca: 11, nota: "Blade de ferrofosfato. Las pruebas coinciden en que el modo eléctrico termina al 25 % del indicador. Carga en alterna a 11 kW y en continua a 18 kW." },
+    { id: "sealuc", n: "BYD Seal U DM-i Comfort (26,6 kWh)", q: "LFP", kwh: 26.6, suelo: 25, cons: 20.0, hev: 6.5, pca: 11, nota: "Blade de ferrofosfato; 125 km eléctricos homologados." },
+    { id: "sealud", n: "BYD Seal U DM-i Design AWD (18,3 kWh)", q: "LFP", kwh: 18.3, suelo: 25, cons: 22.0, hev: 7.5, pca: 11, nota: "Blade de ferrofosfato; tracción total." },
+    { id: "seal6c", n: "BYD Seal 6 DM-i Comfort (19 kWh)", q: "LFP", kwh: 19.0, suelo: 25, cons: 16.0, hev: 5.0, pca: 6.6, nota: "Datos aproximados; comprueba la capacidad y la potencia de carga de tu versión." },
+    { id: "seal6b", n: "BYD Seal 6 DM-i Boost (10,1 kWh)", q: "LFP", kwh: 10.1, suelo: 25, cons: 16.0, hev: 5.0, pca: 3.3, nota: "Datos aproximados; comprueba la capacidad y la potencia de carga de tu versión." },
+    { id: "otrolfp", n: "Otro enchufable de ferrofosfato (introduce los datos)", q: "LFP", kwh: 18.0, suelo: 25, cons: 19.0, hev: 6.0, pca: 6.6, nota: "Introduce la capacidad nominal, el nivel del indicador al que el coche pasa a híbrido y tus consumos reales." },
+    { id: "chr", n: "Toyota C-HR Plug-in Hybrid 220 (13,6 kWh brutos)", q: "NMC", kwh: 10.2, bruta: 13.6, suelo: 0, cons: 17.5, hev: 5.7, pca: 6.6, lo: 20, hi: 95, nota: "Níquel. Toyota no publica la capacidad útil: ≈ 10,2 kWh por la autonomía que midió km77 (55–61 km en ciudad); el ADAC necesitó 12,4 kWh de red por carga completa. Reposo y uso (celda al objetivo USABC)." },
+    { id: "rav4", n: "Toyota RAV4 Plug-in (18,1 kWh brutos)", q: "NMC", kwh: 14.5, bruta: 18.1, suelo: 0, cons: 19.0, hev: 6.2, pca: 6.6, lo: 15, hi: 95, nota: "Níquel; capacidad útil aproximada. Reposo y uso (celda al objetivo USABC)." },
+    { id: "kuga", n: "Ford Kuga PHEV (14,4 kWh brutos; ≈ 11 útiles)", q: "NMC", kwh: 11.0, bruta: 14.4, suelo: 0, cons: 18.5, hev: 6.0, pca: 3.7, lo: 20, hi: 95, nota: "Níquel. Ford no publica la útil: entre 10,8 y 11,5 kWh según lo que entrega un cargador doméstico (12–12,8 kWh); en 2025 Ford amplió por software el margen de los Kuga 2019–2023 (llamada 25SC4). Reposo y uso (celda al objetivo USABC)." },
+    { id: "glc", n: "Mercedes GLC 300 e (31,2 kWh brutos; ≈ 24,8 útiles)", q: "NMC", kwh: 24.8, bruta: 31.2, suelo: 0, cons: 22.0, hev: 7.5, pca: 11, lo: 15, hi: 95, nota: "Níquel; útil deducida de la medición de Automobile Propre (26,6 kWh en continua de vacío a lleno). El ADAC mide en los Mercedes más del 90 % de salud a 150.000 km. Reposo y uso (celda al objetivo USABC)." },
+    { id: "tiguan", n: "VW Tiguan / Tayron eHybrid · Cupra Formentor / Terramar e-Hybrid (25,7 brutos; 19,7 útiles)", q: "NMC", kwh: 19.7, bruta: 25.7, suelo: 0, cons: 19.0, hev: 6.5, pca: 11, lo: 18, hi: 95, nota: "Níquel; capacidades publicadas por Volkswagen (77 % útil). Reposo y uso (celda al objetivo USABC)." },
+    { id: "x1", n: "BMW X1 xDrive25e / 30e (16,3 brutos; 14,2 útiles)", q: "NMC", kwh: 14.2, bruta: 16.3, suelo: 0, cons: 19.0, hev: 6.8, pca: 7.4, lo: 8, hi: 95, nota: "Níquel; capacidades publicadas por BMW (87 % útil, la ventana más ancha de los enchufables analizados). Reposo y uso (celda al objetivo USABC)." },
+    { id: "tucson", n: "Hyundai Tucson / Kia Sportage PHEV (13,8 kWh)", q: "NMC", kwh: 12.5, bruta: 15.5, suelo: 0, cons: 20.0, hev: 7.0, pca: 7.2, lo: 15, hi: 95, nota: "Níquel. km77 cargó 13,66 kWh de red del 12 al 100 %: la cifra de 13,8 kWh se comporta como útil o casi; bruta supuesta. Reposo y uso (celda al objetivo USABC)." },
+    { id: "otronmc", n: "Otro enchufable de níquel (introduce los datos)", q: "NMC", kwh: 12.0, bruta: 16.0, suelo: 0, cons: 19.0, hev: 6.5, pca: 7.4, lo: 20, hi: 95, nota: "Introduce la capacidad útil (la del indicador) y tus consumos reales; la bruta se deduce de la ventana real. Reposo y uso (celda al objetivo USABC)." },
+  ];
+  const $ = (id) => document.getElementById(id);
+  const fmt = (x, d) => { const t = Math.abs(x).toFixed(d).split("."); t[0] = t[0].replace(/\B(?=(\d{3})+(?!\d))/g, "."); return (x < 0 ? "−" : "") + t[0] + (d ? "," + t[1] : ""); };
+  const eur = (x) => fmt(Math.round(x), 0) + " €";
+  const hora = (h) => { h = ((h % 24) + 24) % 24; let hh = Math.floor(h), mm = Math.floor((h - hh) * 60 / 5 + 1e-9) * 5; return `${hh}:${mm < 10 ? "0" : ""}${mm}`; };
+
+  const selCoche = $("coche");
+  [["Ferrofosfato (BYD DM-i): modelo completo", "LFP"], ["Níquel: reposo y uso (celda al objetivo USABC)", "NMC"]].forEach(([lab, q]) => {
+    const g = document.createElement("optgroup"); g.label = lab;
+    COCHES.filter(c => c.q === q).forEach(c => { const o = document.createElement("option"); o.value = c.id; o.textContent = c.n; g.appendChild(o); });
+    selCoche.appendChild(g);
+  });
+  const selClima = $("clima");
+  Object.keys(M.CLIMAS).forEach(k => { const o = document.createElement("option"); o.value = k; o.textContent = k; selClima.appendChild(o); });
+  selClima.value = "Madrid";
+
+  const IDS = ["coche", "kwh", "suelo", "consEv", "consHev", "kmSemana", "kmFinde", "potencia", "trabajo", "hLlegada", "hSalida", "potenciaTrabajo", "precioTrabajo", "tarifa", "gasolina", "pPunta", "pLlano", "pValle", "pUnico", "clima", "ajusteT", "escala", "variante", "realLo", "realHi", "ley", "celda", "topLfp", "escalaNi"];
+  function cargarCoche() {
+    const c = COCHES.find(x => x.id === selCoche.value) || COCHES[0];
+    $("kwh").value = c.kwh; $("suelo").value = c.suelo; $("consEv").value = c.cons; $("consHev").value = c.hev;
+    if (c.q === "NMC") { $("realLo").value = c.lo; $("realHi").value = c.hi; }
+    $("notaCoche").textContent = c.nota || "";
+  }
+  function num(id, def) { const v = parseFloat($(id).value); return isFinite(v) ? v : def; }
+  function leer() {
+    const c = COCHES.find(x => x.id === selCoche.value) || COCHES[0];
+    return {
+      c, kwh: num("kwh", c.kwh), suelo: Math.min(0.5, Math.max(0, num("suelo", c.suelo) / 100)), cons: num("consEv", c.cons) / 100, hev: num("consHev", c.hev) / 100,
+      kmWd: Math.max(0, num("kmSemana", 70)), kmWe: Math.max(0, num("kmFinde", 70)), P: parseFloat($("potencia").value), trabajo: $("trabajo").value,
+      hLleg: Math.min(22, Math.max(12, Math.round(num("hLlegada", 18)))), hSal: Math.min(11, Math.max(4, Math.round(num("hSalida", 8)))),
+      pTrab: parseFloat($("potenciaTrabajo").value), precioTrab: Math.max(0, num("precioTrabajo", 0.2)), tarifa: $("tarifa").value, gas: Math.max(0.5, num("gasolina", 1.92)),
+      pPunta: num("pPunta", 0.199), pLlano: num("pLlano", 0.159), pValle: num("pValle", 0.119), pUnico: num("pUnico", 0.139),
+      clima: $("clima").value, offT: num("ajusteT", 0), escala: parseFloat($("escala").value), variante: $("variante").value,
+      lo: Math.min(0.4, Math.max(0, num("realLo", 20) / 100)), hi: Math.min(1, Math.max(0.7, num("realHi", 95) / 100)),
+      ley: $("ley").value, celda: parseFloat($("celda").value), top: Math.min(1, Math.max(0.85, num("topLfp", 100) / 100)),
+      escalaNi: { usabc: M.ESCALA_NI_USABC, doble: M.ESCALA_NI_USABC / Math.SQRT2, sanyo: 1.0, cero: 0 }[$("escalaNi").value],
+    };
+  }
+  function guardar() { try { const v = {}; IDS.forEach(id => v[id] = $(id).value); localStorage.setItem("calc-phev-v3", JSON.stringify(v)); } catch (e) { } }
+  function restaurar() { try { const v = JSON.parse(localStorage.getItem("calc-phev-v3") || "null"); if (!v) return false; IDS.forEach(id => { if (v[id] != null) $(id).value = v[id]; }); return true; } catch (e) { return false; } }
+
+  function calcular() {
+    const u = leer();
+    const nmc = u.c.q === "NMC";
+    $("lblKwh").textContent = nmc ? "Batería útil" : "Batería (nominal)";
+    $("filaTrabajo").hidden = u.trabajo === "no"; $("precioTrabajo").disabled = u.trabajo !== "pago";
+    $("fila3p").hidden = u.tarifa !== "3p"; $("filaUnica").hidden = u.tarifa === "3p"; $("filaNmc").hidden = !nmc; $("variante").disabled = nmc;
+    $("ley").disabled = nmc; $("celda").disabled = nmc; $("topLfp").disabled = nmc; $("escalaNi").disabled = !nmc;
+    const coche = { kwh: u.kwh, suelo: u.suelo, top: nmc ? 1 : u.top, cons_ev: u.cons, cons_hev: u.hev, p_ca: u.c.pca, quimica: u.c.q, real_lo: u.lo, real_hi: u.hi, kwh_bruta: nmc ? (u.c.bruta ? u.c.bruta * u.kwh / u.c.kwh : u.kwh / (u.hi - u.lo)) : null };
+    const km = [u.kmWd, u.kmWd, u.kmWd, u.kmWd, u.kmWd, u.kmWe, u.kmWe];
+    const hE = Math.min(23, u.hLleg + 1);
+    const precios = u.tarifa === "3p" ? { punta: u.pPunta, llano: u.pLlano, valle: u.pValle } : u.pUnico;
+    const e = nmc ? 1 : u.escala;
+    const base = { clima: u.clima, offset_T: u.offT, anos: 15, variante: u.variante, ley: u.ley, celda: u.celda, escala_ni: u.escalaNi, h_regreso: u.hLleg, h_enchufe: hE, h_salida: u.hSal, precios: precios, precio_gasolina: u.gas, escala: e };
+    const kwhInd = u.kwh * (nmc ? 1 : u.top);
+    const ventana = 1 - u.suelo, needWd = u.kmWd * u.cons / kwhInd, needWe = u.kmWe * u.cons / kwhInd, needMax = Math.max(needWd, needWe);
+    const cabe = needMax > 0 && (u.suelo + needMax + 0.10) <= 0.95 + 1e-9;
+    const usaTrabajo = u.trabajo !== "no" && needWd > ventana + 1e-9;
+    const oT = usaTrabajo ? { trabajo: { potencia: u.pTrab, h_ini: u.hSal + 1 }, precio_trabajo: u.trabajo === "pago" ? u.precioTrab : 0 } : {};
+    const objJ = Math.min(1, Math.ceil((u.suelo + needMax + 0.10) * 20 - 1e-9) / 20);
+    const sim = (o) => M.simular(coche, km, u.P, Object.assign({}, base, o));
+    const S = {};
+    S.nunca = sim({ nunca: true });
+    S.ench = sim(Object.assign({}, oT));
+    S.media = sim(Object.assign({ inicio_fijo: 0 }, oT));
+    S.prog = sim(Object.assign({ programada: true }, oT));
+    if (u.suelo + 0.15 < 0.8) S.l80 = sim(Object.assign({ objetivo: 0.8, programada: true }, oT));
+    if (cabe && objJ < 0.999) S.justo = sim({ objetivo: objJ, programada: true, semanal_100: nmc ? null : 6 });
+    if (usaTrabajo) S.sinTrabajo = sim({ programada: true });
+    const recK = S.justo ? "justo" : "prog";
+    const Rr = S[recK];
+    const objR = S.justo ? objJ : 1.0;
+    const L = (r) => r.total[9] * e * 100, L15 = (r) => r.total[14] * e * 100;
+    const E1 = (r) => r.euros_ano_nueva.total, E10 = (r) => r.euros_ano.slice(0, 10).reduce((a, b) => a + b, 0);
+    const kmAno = (5 * u.kmWd + 2 * u.kmWe) * 365 / 7;
+    const pEv = (r) => kmAno > 0 ? r.km_ev_ano_nueva / kmAno * 100 : 0;
+
+    // ---------- héroe: hora de inicio
+    const pKw = Math.min(u.P, u.c.pca);
+    const sArr = Rr.perfil.soc[24 + hE - 1];
+    const horas = Math.max(0, (objR - sArr) * kwhInd / (pKw * 0.9));
+    const disponibles = (24 - hE) + u.hSal;
+    const llega = horas <= disponibles + 1e-9;
+    const inicio = llega ? u.hSal - horas : hE;
+    $("horaTxt").textContent = kmAno === 0 ? "—" : hora(inicio);
+    const nivel = objR >= 0.999 ? "el 100 %" : `el ${Math.round(objR * 100)} %`;
+    $("horaSub").textContent = kmAno === 0 ? "Introduce tus kilómetros diarios." : (llega
+      ? `Hora a la que empezar la carga para que termine a las ${hora(u.hSal)}, cuando sales: ${fmt(horas, 1)} horas a ${fmt(pKw, 1)} kW hasta ${nivel}. La batería pasa la noche al ${Math.round(sArr * 100)} % en lugar de al ${Math.round(objR * 100)} %.`
+      : `Tu cargador necesita ${fmt(horas, 1)} horas y solo hay ${disponibles} entre que enchufas (${hora(hE)}) y sales (${hora(u.hSal)}): enchufa al llegar; la batería no llega a esperar llena.`);
+    const esByd = u.c.id.indexOf("atto") === 0 || u.c.id.indexOf("seal") === 0;
+    $("como").textContent = esByd
+      ? `En la aplicación de BYD, fija el horario de carga con inicio a las ${hora(inicio)} y fin a las ${hora(u.hSal)}, todos los días. Sirve igual la programación horaria del cargador. ${u.tarifa === "3p" ? (inicio >= 0 && inicio < 8 ? "Toda la carga cae en el periodo valle." : "Parte de la carga cae fuera del valle: revisa la potencia del cargador.") : ""}`
+      : `Programa en el coche, en su aplicación o en el cargador el inicio de la carga a las ${hora(inicio)} (o la hora de salida a las ${hora(u.hSal)}, si tu coche calcula el inicio por sí mismo). ${u.tarifa === "3p" ? (inicio >= 0 && inicio < 8 ? "Toda la carga cae en el periodo valle." : "") : ""}`;
+    if (S.justo) {
+      $("cuanto").textContent = nmc
+        ? `Tu día gasta ${Math.round(needMax * 100)} puntos del indicador: si tu coche permite fijar un límite de carga, ponlo en el ${Math.round(objJ * 100)} % (lo que pide el día y 10 puntos de margen); si no, acorta la carga a ${fmt(horas, 1)} horas. En el níquel el límite reduce además el desgaste por uso, porque acorta la profundidad del ciclo: ganas ${fmt(L(S.prog) - L(S.justo), 1)} puntos a diez años sin gastar gasolina.`
+        : `Tu día gasta el ${Math.round(needMax * 100)} % de la batería: carga cada noche solo hasta el ${Math.round(objJ * 100)} % (el ${Math.round(u.suelo * 100)} % de reserva, lo que pide el día y 10 de margen) acortando la carga a ${fmt(horas, 1)} horas, y haz una carga completa a la semana, como pide el manual del Seal U DM-i. Ganas ${fmt(L(S.prog) - L(S.justo), 1)} puntos a diez años respecto a llenarla cada noche, sin gastar gasolina.`;
+    } else {
+      $("cuanto").textContent = needMax >= ventana
+        ? `Tu día gasta más de lo que cabe en la batería (${fmt(ventana * kwhInd / u.cons, 0)} km eléctricos): carga completa cada noche. Cada 10 % que dejes sin cargar son ${fmt(0.1 * kwhInd / u.cons, 1)} km diarios que pasan a gasolina.`
+        : `Tu día gasta el ${Math.round(needMax * 100)} % de la batería, de un ${Math.round(ventana * 100)} % disponible: carga completa cada noche; no hay margen para un límite inferior sin gastar gasolina.`;
+    }
+    const eurKwhMotor = u.gas / (8.9 * 0.43 * 0.93 * 0.95), eurKwhCasa = (u.tarifa === "3p" ? u.pValle : u.pUnico) / 0.9;
+    const cHev = u.hev * u.gas, cEv = u.cons * eurKwhCasa;
+    $("hibrido").textContent = (esByd
+      ? `Deja el estado de carga objetivo del modo híbrido en el mínimo (25 %) salvo que quieras reservar batería para un tramo concreto: es la única palanca que mueve el suelo de la ventana y acorta el ciclo, pero cada 10 % que lo subas son ${fmt(0.1 * kwhInd / u.cons, 1)} km eléctricos menos al día. `
+      : `Usa el modo eléctrico o el automático a diario, y los de reserva o de carga con el motor solo para un tramo concreto. `)
+      + `Llenar la batería con el motor de gasolina cuesta como mínimo ${fmt(eurKwhMotor, 2)} € por kWh, ${fmt(eurKwhMotor / eurKwhCasa, 1)} veces tu enchufe.`;
+    const umbral = cHev * 0.9 / u.cons;
+    let fuera = `Con tus consumos y la gasolina a ${fmt(u.gas, 2)} €/l, el kilómetro con gasolina cuesta ${fmt(cHev * 100, 1)} céntimos y el eléctrico de casa ${fmt(cEv * 100, 1)}. Cargar fuera de casa solo ahorra por debajo de ${fmt(umbral, 2)} €/kWh.`;
+    if (u.trabajo !== "no") {
+      fuera += usaTrabajo
+        ? ` Cargar también en el trabajo te ahorra ${eur(E1(S.sinTrabajo) - E1(S.prog))} al año y cuesta ${fmt(L(S.prog) - L(S.sinTrabajo), 1)} puntos más de batería a diez años.`
+        : ` Entre semana tu día cabe en la batería: el enchufe del trabajo no te hace falta, y no se ha incluido en el cálculo.`;
+    }
+    $("fuera").textContent = fuera;
+    // ---------- profundidad del ciclo y reserva
+    const dodR = Rr.dod * 100, fecR = Rr.fec_prof_ano, ciclosR = Rr.dod > 0 ? fecR / Rr.dod : 0;
+    const kdRel = nmc ? null : M.kDod(Rr.dod, u.ley) / M.kDod(1, u.ley);
+    $("profundidad").textContent = kmAno === 0 ? "" : (nmc
+      ? `Tu ciclo diario tiene una profundidad media del ${fmt(dodR, 0)} % de la celda (ventana real ${Math.round(u.lo * 100)}–${Math.round(u.hi * 100)} %): ${fmt(ciclosR, 0)} ciclos al año, ${fmt(fecR, 0)} completos equivalentes. En el níquel la energía hasta el fin de vida es casi inversa a la profundidad (Ecker 2014): el uso pesa ${fmt(Rr.cyc[9] * 100, 1)} puntos a diez años con la celda elegida.`
+      : `Tu ciclo diario tiene una profundidad media del ${fmt(dodR, 0)} %: ${fmt(ciclosR, 0)} ciclos al año, ${fmt(fecR, 0)} completos equivalentes (${fmt(fecR * 10, 0)} en diez años; las celdas LFP de Sandia soportaron entre 2.500 y 9.000). Con la ley elegida, cada kWh de un ciclo así desgasta ${fmt(kdRel * kdRel * 100, 0)} % de lo que desgastaría en un ciclo completo: el uso pesa ${fmt(Rr.cyc[9] * e * 100, 1)} puntos a diez años${u.celda < 13000 ? " con una celda de " + fmt(u.celda, 0) + " ciclos" : ""}.`);
+    const dodSin = Math.min(1, (u.suelo + needMax)), fecSin = fecR + (needMax > ventana ? (needMax - ventana) * 365 * (needWd >= ventana ? 5 / 7 : 0) : 0);
+    $("reserva").textContent = kmAno === 0 ? "" : (nmc
+      ? `El fabricante esconde el ${Math.round((1 - (u.hi - u.lo)) * 100)} % de la celda detrás del indicador: acota la profundidad del ciclo en el ${Math.round((u.hi - u.lo) * 100)} % y absorbe las primeras pérdidas sin que se vean; no las evita.`
+      : (needMax > ventana + 1e-9
+        ? `Tu día no cabe en la ventana: la reserva del ${Math.round(u.suelo * 100)} % acota tu ciclo en el ${Math.round(ventana * 100)} % en lugar del ${Math.round(dodSin * 100)} % que haría un coche que usara toda la batería, y manda ${fmt((needMax - ventana) * kwhInd / u.cons, 0)} km diarios a la gasolina. En energía, la reserva compra poco: es el capital de trabajo del modo híbrido, no un seguro de longevidad.`
+        : `Tu día cabe en la ventana: la reserva del ${Math.round(u.suelo * 100)} % no cambia la profundidad de tu ciclo (${fmt(dodR, 0)} % con o sin ella); solo acotaría los días que superen ${fmt(ventana * kwhInd / u.cons, 0)} km eléctricos.`));
+
+    // ---------- aviso níquel
+    const av = $("avisoNmc"); av.hidden = !nmc;
+    if (nmc) av.textContent = u.escalaNi === 0
+      ? `Batería de níquel, solo reposo (Schmalstieg 2014) sobre una ventana real supuesta del ${Math.round(u.lo * 100)} al ${Math.round(u.hi * 100)} %: el uso está desactivado en «Método».`
+      : `Batería de níquel: reposo de Schmalstieg (2014) sobre una ventana real supuesta del ${Math.round(u.lo * 100)} al ${Math.round(u.hi * 100)} %, y uso con la β de Schmalstieg (lineal en la profundidad) escalada ${u.escalaNi >= 0.99 ? "sin corregir (celda de eléctrico puro: cota superior)" : "a una celda que cumpla " + (u.escalaNi < 0.4 ? "el doble" : "justo") + " del objetivo USABC de enchufable (5.000 ciclos del 70 % hasta el 80 %)"}: una hipótesis declarada, no una medición de las celdas de este coche. Como referencia de flota, el ADAC mide a 150.000 km más del 90 % en los Mercedes y en torno al 70 % en los Mitsubishi de uso intensivo, y propone para un usado un mínimo del 88 % a 100.000 km y del 80 % a 200.000.`;
+
+    // ---------- fichas
+    const aut = ventana * kwhInd / u.cons;
+    const ficha = (suf, r) => {
+      $("cap" + suf).textContent = fmt(100 - L(r), 1) + " %";
+      $("cap" + suf + "u").textContent = `−${fmt(L(r), 1)} puntos · ${fmt(aut * (1 - L(r) / 100), 0)} km eléctricos`;
+      $("eur" + suf).textContent = eur(E1(r)); $("e10" + suf).textContent = eur(E10(r)); $("ev" + suf).textContent = fmt(pEv(r), 0) + " %";
+    };
+    ficha("N", S.nunca); ficha("A", S.ench); ficha("R", Rr);
+    $("tituloRec").textContent = "Tu rutina: " + (S.justo ? `hasta el ${Math.round(objJ * 100)} %, programada${nmc ? "" : ", y completa semanal"}` : "al 100 %, programada para terminar al salir") + (usaTrabajo ? ", y enchufe del trabajo" : "");
+    const dP = L(S.ench) - L(Rr), dE = E1(S.ench) - E1(Rr), dN = L(Rr) - L(S.nunca), dEN = E1(S.nunca) - E1(Rr);
+    $("ganancia").innerHTML = `Frente a cargar nada más enchufar, tu rutina conserva <strong>${fmt(dP, 1)} puntos más de batería</strong> a los diez años` + (Math.abs(dE) >= 1 ? ` y cuesta <strong>${eur(Math.abs(dE))} ${dE >= 0 ? "menos" : "más"} al año</strong> (${eur(Math.abs(E10(S.ench) - E10(Rr)))} en diez años)` : ` con la misma factura`) + `: mejora ${dE >= 1 ? "en las dos monedas" : "la batería sin coste"}. Frente a no enchufarlo, ahorra ${eur(dEN)} al año y la batería pierde ${fmt(dN, 1)} puntos más` + (dN > 0.05 ? `: cada punto gastado devuelve ${eur(dEN / dN)} al año.` : ".");
+    const puntoKwh = 0.01 * kwhInd * ventana, puntoM = puntoKwh / u.cons * 1000;
+    const diasAgota = ((needWd >= ventana ? 5 : 0) + (needWe >= ventana ? 2 : 0)) / 7 * 365;
+    const valorPleno = puntoKwh / u.cons * (cHev - cEv) * 365;
+    let cambio = `<strong>El tipo de cambio.</strong> Un punto de tu batería son ${fmt(puntoKwh, 3)} kWh de ventana eléctrica y ${fmt(puntoM, 0)} metros de autonomía. `;
+    cambio += diasAgota > 0 ? `Como agotas la batería ${fmt(diasAgota, 0)} días al año, <strong>vale ${eur(valorPleno * diasAgota / 365)} de gasolina al año</strong>. ` : `Hoy tu día cabe en la batería y perderlo no te cuesta nada; si la agotaras a diario valdría ${eur(valorPleno)} de gasolina al año. `;
+    if (S.l80) { const gp = L(S.prog) - L(S.l80), ge = E1(S.l80) - E1(S.prog); if (gp > 0.05 && ge > 1) cambio += `Conservarlo cargando solo hasta el 80 % te costaría ${eur(ge / gp)} el primer año por punto.`; else if (gp > 0.05) cambio += `Cargar solo hasta el 80 % conserva ${fmt(gp, 1)} puntos y hoy no te cuesta gasolina.`; }
+    $("cambio").innerHTML = cambio;
+
+    // ---------- tabla y mapa
+    const filas = [["nunca", "Sin enchufarlo nunca", "var(--red)"], ["ench", "Al 100 %, nada más enchufar", "var(--blue)"], ["media", "Al 100 %, con inicio a medianoche", "var(--muted)"], ["prog", "Al 100 %, programada para terminar al salir", S.justo ? "var(--muted)" : "var(--amber)"]];
+    if (S.justo) filas.push(["justo", `Hasta el ${Math.round(objJ * 100)} %, programada${nmc ? "" : ", y completa semanal"}`, "var(--amber)"]);
+    if (S.l80 && !(S.justo && Math.abs(objJ - 0.8) < 0.001)) filas.push(["l80", "Hasta el 80 %, programada", "var(--muted)"]);
+    if (S.sinTrabajo) filas.push(["sinTrabajo", "Al 100 %, programada, sin cargar en el trabajo", "var(--muted)"]);
+    const tb = $("tabla").querySelector("tbody"); tb.innerHTML = "";
+    $("thPerdida").textContent = "Pérdida a 10 años";
+    filas.forEach(([k, nombre]) => {
+      const r = S[k], dp = L(Rr) - L(r), de = E1(r) - E1(Rr);
+      let cambioTxt = "—";
+      if (k !== recK) { if (dp > 0.05 && de > 1) cambioTxt = eur(de / dp); else if (dp <= 0.05 && de >= -1) cambioTxt = "peor o igual en las dos"; else if (dp > 0.05 && de <= 1) cambioTxt = "sin coste"; else cambioTxt = "más barata, más desgaste"; }
+      const tr = document.createElement("tr"); if (k === recK) tr.className = "rec";
+      tr.innerHTML = `<td>${nombre}${k === recK ? " · tu rutina" : ""}</td><td class="r">${fmt(L(r), 1)}</td><td class="r">${fmt(r.cal[9] * e * 100, 1)}</td><td class="r">${fmt(r.cyc[9] * e * 100, 1)}</td><td class="r">${r.dod > 0 ? fmt(r.dod * 100, 0) + " %" : "—"}</td><td class="r">${fmt(r.fec_prof_ano, 0)}</td><td class="r">${fmt(pEv(r), 0)} %</td><td class="r">${eur(E1(r))}</td><td class="r">${eur(E10(r))}</td><td class="r">${cambioTxt}</td>`;
+      tb.appendChild(tr);
+    });
+    const leyTxt = { naumann: "cúbica de Naumann", plana: "sin efecto por kWh (Wang)", omar: "ley de potencia (Omar)", inversa: "1/DoD (Aquisgrán)" }[u.ley];
+    $("notaTabla").textContent = `Pérdida de capacidad en puntos porcentuales a los diez años, separada en reposo y uso; profundidad media del ciclo (de la celda) y ciclos completos equivalentes al año; ${fmt(kmAno, 0)} km al año. Los euros en diez años incluyen los kilómetros que dejan de caber en la batería al envejecer. ${nmc ? "Níquel: uso con la β de Schmalstieg escalada (" + (u.escalaNi === 0 ? "desactivado" : "× " + fmt(u.escalaNi, 2)) + ")." : "Escala " + (e < 1 ? "corregida (÷1,4)" : "de celda de laboratorio") + ", curva de reposo " + (u.variante === "alta" ? "de penalización alta" : "suave") + ", ley de profundidad " + leyTxt + ", celda de " + fmt(u.celda, 0) + " ciclos completos" + (u.top < 0.999 ? ", indicador al 100 % = " + Math.round(u.top * 100) + " % real" : "") + "."}`;
+    $("notaMapa").textContent = `Horizontal: coste de la energía del primer año. Vertical: pérdida de capacidad a los diez años. Las rutinas que cargan menos bajan hacia la derecha: menos desgaste a cambio de gasolina.`;
+    $("tituloCurva").textContent = "Capacidad a lo largo de quince años";
+    dibujarNoche(S.ench, Rr, u, hE);
+    dibujarMapa(filas.map(([k, nombre, col]) => ({ k, nombre, col, x: E1(S[k]), y: L(S[k]), rec: k === recK })));
+    dibujarCurvas([S.nunca, S.ench, Rr], e, false, aut);
+    guardar();
+  }
+
+  // ---------- la noche de la batería
+  function dibujarNoche(a, r, u, hE) {
+    const svg = $("noche"), W = 760, H = 250, Lm = 46, Rm = 14, T = 16, B = 34;
+    const t0 = 24 + u.hLleg - 1, t1 = 48 + u.hSal + 1;
+    const x = (t) => Lm + (t - t0) / (t1 - t0) * (W - Lm - Rm), y = (s) => T + (1 - s) * (H - T - B);
+    let s = "";
+    const col = { punta: "var(--punta)", llano: "var(--llano)", valle: "var(--valle)" };
+    for (let t = t0; t < t1; t++) {
+      const d = Math.floor(t / 24) % 7, h = t % 24;
+      const p = u.tarifa === "3p" ? M.periodo(d, h) : "llano";
+      s += `<rect x="${x(t).toFixed(1)}" y="${T}" width="${(x(t + 1) - x(t) + 0.5).toFixed(1)}" height="${H - T - B}" fill="${col[p]}"/>`;
+    }
+    if (u.suelo > 0) s += `<rect x="${Lm}" y="${y(u.suelo).toFixed(1)}" width="${W - Lm - Rm}" height="${(y(0) - y(u.suelo)).toFixed(1)}" fill="var(--reserva)" fill-opacity="0.8"/><text x="${(Lm + (W - Lm - Rm) / 2).toFixed(1)}" y="${(y(u.suelo / 2) + 10).toFixed(1)}" text-anchor="middle">reserva del modo híbrido</text>`;
+    [0, 0.25, 0.5, 0.75, 1].forEach(v => { s += `<line class="gridl" x1="${Lm}" x2="${W - Rm}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text x="${Lm - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end">${Math.round(v * 100)} %</text>`; });
+    for (let t = t0; t <= t1; t++) { const h = t % 24; if (h % 2 === 0 || t === t0 || t === t1) s += `<text x="${x(t).toFixed(1)}" y="${H - B + 17}" text-anchor="middle">${h}:00</text>`; }
+    const traza = (perfil) => {
+      const soc = perfil.soc; let pts = [[t0, soc[(t0 - 1) % 168]]];
+      for (let t = t0; t < t1; t++) { const h = t % 24; if (h === u.hLleg || h === u.hSal) { pts.push([t, soc[(t - 1) % 168]]); pts.push([t, soc[t % 168]]); } pts.push([t + 1, soc[t % 168]]); }
+      return pts.map((p, i) => (i ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1)).join(" ");
+    };
+    s += `<path d="${traza(a.perfil)}" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linejoin="round"/>`;
+    s += `<path d="${traza(r.perfil)}" fill="none" stroke="var(--amber)" stroke-width="3.5" stroke-linejoin="round"/>`;
+    const yEt = u.suelo > 0.08 ? y(u.suelo) + 15 : H - B - 8;
+    s += `<line class="axis" x1="${x(24 + hE).toFixed(1)}" x2="${x(24 + hE).toFixed(1)}" y1="${T}" y2="${H - B}" stroke-dasharray="2 4"/><text x="${(x(24 + hE) + 5).toFixed(1)}" y="${yEt.toFixed(1)}" style="font-size:11.5px;fill:var(--txt)">enchufas</text>`;
+    s += `<line class="axis" x1="${x(48 + u.hSal).toFixed(1)}" x2="${x(48 + u.hSal).toFixed(1)}" y1="${T}" y2="${H - B}" stroke-dasharray="2 4"/><text x="${(x(48 + u.hSal) - 5).toFixed(1)}" y="${yEt.toFixed(1)}" text-anchor="end" style="font-size:11.5px;fill:var(--txt)">sales</text>`;
+    svg.innerHTML = s;
+  }
+
+  // ---------- mapa de las dos monedas
+  function dibujarMapa(pts) {
+    const svg = $("mapa"), W = 760, H = 340, Lm = 50, Rm = 18, T = 14, B = 44;
+    let xmax = Math.max.apply(null, pts.map(p => p.x)), ymax = Math.max.apply(null, pts.map(p => p.y)), ymin = Math.min.apply(null, pts.map(p => p.y));
+    xmax = Math.max(200, Math.ceil(xmax * 1.12 / 500) * 500); ymin = Math.max(0, Math.floor(ymin - 1.5)); ymax = Math.ceil(ymax + 1.5);
+    const x = (v) => Lm + v / xmax * (W - Lm - Rm), y = (v) => T + (ymax - v) / (ymax - ymin) * (H - T - B);
+    let s = "";
+    const pasoX = xmax <= 1500 ? 250 : xmax <= 3000 ? 500 : 1000;
+    for (let v = 0; v <= xmax; v += pasoX) s += `<line class="gridl" x1="${x(v).toFixed(1)}" x2="${x(v).toFixed(1)}" y1="${T}" y2="${H - B}"/><text x="${x(v).toFixed(1)}" y="${H - B + 16}" text-anchor="middle">${fmt(v, 0)} €</text>`;
+    const pasoY = (ymax - ymin) > 12 ? 4 : 2;
+    for (let v = Math.ceil(ymin / pasoY) * pasoY; v <= ymax; v += pasoY) s += `<line class="gridl" x1="${Lm}" x2="${W - Rm}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text x="${Lm - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end">${v} %</text>`;
+    s += `<text x="${(Lm + W - Rm) / 2}" y="${H - 6}" text-anchor="middle">coste de la energía al año →</text>`;
+    s += `<text transform="translate(12 ${(T + H - B) / 2}) rotate(-90)" text-anchor="middle">pérdida a 10 años →</text>`;
+    // etiquetas con separación vertical mínima por lado
+    const labs = pts.map(p => ({ p, izq: x(p.x) > Lm + (W - Lm - Rm) * 0.6, yy: y(p.y) + 4 }));
+    ["izq", "der"].forEach(lado => { const g = labs.filter(l => (lado === "izq") === l.izq).sort((a, b) => a.yy - b.yy); for (let i = 1; i < g.length; i++) if (g[i].yy - g[i - 1].yy < 15) g[i].yy = g[i - 1].yy + 15; });
+    labs.forEach(l => {
+      const p = l.p, cx = x(p.x), cy = y(p.y);
+      s += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${p.rec ? 8 : 6}" fill="${p.col}" stroke="var(--card)" stroke-width="2"/>`;
+      const corto = p.nombre.replace("Al 100 %, ", "").replace(" para terminar al salir", "").replace(", y completa semanal", "");
+      s += `<text x="${(cx + (l.izq ? -11 : 11)).toFixed(1)}" y="${l.yy.toFixed(1)}" text-anchor="${l.izq ? "end" : "start"}" style="fill:var(--txt);${p.rec ? "font-weight:600" : ""}">${corto}</text>`;
+    });
+    svg.innerHTML = s;
+  }
+
+  // ---------- curvas a quince años
+  function dibujarCurvas(regs, e, nmc, aut) {
+    const svg = $("chart"), W = 760, H = 300, Lm = 50, Rm = 64, T = 14, B = 36;
+    const val = (r, k) => nmc ? r.total[k] * e * 100 : (1 - r.total[k] * e) * 100;
+    let lo = 1e9, hi = -1e9; regs.forEach(r => { for (let k = 0; k < 15; k++) { const v = val(r, k); if (v < lo) lo = v; if (v > hi) hi = v; } });
+    let ymin, ymax; if (nmc) { ymin = 0; ymax = Math.ceil((hi + 1) / 2) * 2; } else { ymin = Math.floor((lo - 2) / 5) * 5; ymax = 100; }
+    const x = (a) => Lm + a / 15 * (W - Lm - Rm), y = (v) => T + (ymax - v) / (ymax - ymin) * (H - T - B);
+    let s = "";
+    const paso = (ymax - ymin) > 25 ? 10 : (ymax - ymin) > 12 ? 5 : 2;
+    for (let v = ymin; v <= ymax + 1e-9; v += paso) s += `<line class="gridl" x1="${Lm}" x2="${W - Rm}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text x="${Lm - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end">${v} %</text>`;
+    for (let a = 0; a <= 15; a += 5) s += `<text x="${x(a).toFixed(1)}" y="${H - B + 18}" text-anchor="middle">${a === 0 ? "hoy" : a + " años"}</text>`;
+    s += `<line class="gridl" x1="${x(10).toFixed(1)}" x2="${x(10).toFixed(1)}" y1="${T}" y2="${H - B}"/>`;
+    const cols = ["var(--red)", "var(--blue)", "var(--amber)"], labs = [];
+    regs.forEach((r, i) => {
+      let d = `M ${x(0).toFixed(1)} ${y(nmc ? 0 : 100).toFixed(1)}`;
+      for (let k = 0; k < 15; k++) d += ` L ${x(k + 1).toFixed(1)} ${y(val(r, k)).toFixed(1)}`;
+      s += `<path d="${d}" fill="none" stroke="${cols[i]}" stroke-width="${i === 2 ? 3.5 : 2.5}" stroke-linejoin="round"/>`;
+      s += `<circle cx="${x(10).toFixed(1)}" cy="${y(val(r, 9)).toFixed(1)}" r="4.5" fill="${cols[i]}" stroke="var(--card)" stroke-width="2"/>`;
+      labs.push({ i, v: val(r, 14), yy: y(val(r, 14)) + 4 });
+    });
+    labs.sort((a, b) => a.yy - b.yy); for (let j = 1; j < labs.length; j++) if (labs[j].yy - labs[j - 1].yy < 15) labs[j].yy = labs[j - 1].yy + 15;
+    labs.forEach(l => { s += `<text x="${(x(15) + 6).toFixed(1)}" y="${l.yy.toFixed(1)}" style="fill:var(--txt);font-weight:600">${fmt(l.v, 1)} %</text>`; });
+    svg.innerHTML = s;
+  }
+
+  let timer = null;
+  const programar = () => { clearTimeout(timer); timer = setTimeout(calcular, 80); };
+  IDS.forEach(id => { $(id).addEventListener("input", programar); $(id).addEventListener("change", programar); });
+  selCoche.addEventListener("change", () => { cargarCoche(); programar(); });
+  if (!restaurar()) cargarCoche();
+  if (!$("kwh").value) cargarCoche();
+  $("notaCoche").textContent = (COCHES.find(x => x.id === selCoche.value) || COCHES[0]).nota || "";
+  calcular();
+})();
+</script>
+</body>
+</html>
