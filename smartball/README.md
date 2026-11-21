@@ -10,11 +10,14 @@ Funciona en **Google Chrome** (Android o PC) mediante Web Bluetooth; no hay que 
 4. **Preparar chute** → deja el balón quieto → silbato → chuta (≥ 1 m de altura y ≥ 10 m sin botar).
 5. Los datos se descargan solos (móvil a menos de 10 m) y quedan en el historial; se pueden exportar a CSV o JSON.
 
-## Qué enseña (versión 2)
-- **Trayectoria** animada sobre el campo en tres vistas (perspectiva, lateral y desde arriba), con el mismo chute sin efecto como referencia.
-- **Giro (rpm)**, eje de giro con un balón que rota como lo hizo el real, reparto en **liftado / rosca / bala** y **punto de golpeo**.
-- **Si fuera una falta**: portería a 16, 20, 25 o 30 m y barrera a 9,15 m; altura a la que pasa por cada una.
-- **Vídeo** de cada chute con la cámara del móvil: guarda solo unos segundos alrededor del golpeo, se ve a cámara lenta y fotograma a fotograma, y sirve para **medir el ángulo de salida** con dos toques.
+## Qué enseña (versión 3)
+- **Pantalla Chute**: mientras se prepara el chute, el campo ocupa toda la pantalla, visto desde detrás del balón; al llegar los datos, la trayectoria se anima y la cámara se aleja hasta la perspectiva. También vista lateral y desde arriba.
+- **Resultado** con los números grandes siempre a la vista y el detalle en pestañas: Vuelo, Giro y golpeo (balón en 3D girando sobre el eje medido y punto de golpeo), Falta (portería a 16, 20, 25 o 30 m y barrera a 9,15 m) y Vídeo.
+- **Pie de golpeo** (se elige al preparar el chute y se puede corregir después); con el pie y la rosca indica si fue típico del interior o del exterior.
+- **Comparación con el chute anterior** en velocidad y giro.
+- **Historial** con récords y la evolución por semanas de la velocidad, el giro o el liftado (cada chute, media y mejor de la semana), filtrable por pie, con tabla.
+- **Retos** de uno o dos jugadores por turnos: velocidad dentro de un rango, el más rápido, el de más giro o el más liftado, con marcador.
+- **Vídeo** de cada chute con la cámara del móvil: cámara lenta, fotograma a fotograma, medida del ángulo de salida con dos toques y la trayectoria calculada dibujada encima.
 - **Primer bote**: si entra en el segundo que graba el balón, ajusta la trayectoria a ese bote.
 
 ## Qué es medido y qué es estimado

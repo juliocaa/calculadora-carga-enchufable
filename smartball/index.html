@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#07301F">
 <title>Smart Ball</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -12,72 +12,117 @@
   @font-face { font-family: "Atkinson Hyperlegible"; src: url("fonts/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
   @font-face { font-family: "Atkinson Hyperlegible"; src: url("fonts/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-display: swap; }
   :root {
-    --cesped: #0A4F36; --cesped-2: #0C5A3D; --hondo: #07301F;
-    --cal: #F4F7F1; --cal-2: rgba(244,247,241,.74); --cal-3: rgba(244,247,241,.26);
+    --cesped: #0A4F36; --cesped-2: #0C5A3D; --hondo: #07301F; --noche: #052317;
+    --cal: #F4F7F1; --cal-2: rgba(244,247,241,.74); --cal-3: rgba(244,247,241,.26); --cal-4: rgba(244,247,241,.12);
     --tinta: #0A1E16; --amarilla: #FFD60A; --roja: #C92A22; --azul: #2F6FE0;
     --display: "Anton", "Arial Narrow", Impact, sans-serif;
     --texto: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --dock: 92px;
   }
   * { box-sizing: border-box; }
-  html { background: var(--cesped); -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0; color: var(--cal); font: 17px/1.45 var(--texto);
-    background: repeating-linear-gradient(180deg, var(--cesped) 0 120px, var(--cesped-2) 120px 240px);
-    padding-bottom: calc(var(--dock) + env(safe-area-inset-bottom, 0px) + 56px);
-  }
+  html, body { height: 100%; }
+  html { background: var(--noche); -webkit-text-size-adjust: 100%; }
+  body { margin: 0; color: var(--cal); font: 17px/1.45 var(--texto); background: var(--noche); overflow: hidden; }
   [hidden] { display: none !important; }
   h1, h2, h3, p, ul, ol, dl, dd, figure { margin: 0; }
   ul, ol { padding: 0; list-style: none; }
-  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  button:active:not(:disabled) { transform: translateY(1px); }
   :focus-visible { outline: 3px solid var(--amarilla); outline-offset: 2px; }
-  .app { max-width: 720px; margin: 0 auto; }
 
-  /* cabecera */
-  .top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 16px 10px; }
-  .top h1 { font: 400 24px/1 var(--display); letter-spacing: .02em; white-space: nowrap; flex: none; }
-  .conn { font-size: 14px; color: var(--cal-2); text-align: right; }
-  .conn .link { font-size: 14px; padding: 0; margin-left: 6px; color: var(--cal); }
-  .notice { margin: 0 16px 12px; padding: 10px 12px; border: 1.5px solid var(--cal); font-size: 15px; }
+  /* armazón: cabecera, pantallas, botón principal y pestañas */
+  .shell { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; height: 100vh; height: 100dvh; max-width: 720px; margin: 0 auto; background: var(--hondo); }
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: calc(8px + env(safe-area-inset-top, 0px)) 16px 8px; background: var(--hondo); border-bottom: 1px solid var(--cal-3); }
+  .brand { display: flex; align-items: center; gap: 9px; flex: none; }
+  .brand svg { width: 30px; height: 30px; display: block; }
+  .brand h1 { font: 400 23px/1 var(--display); letter-spacing: .03em; white-space: nowrap; }
+  .conn { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 4px 10px; font-size: 14px; color: var(--cal-2); text-align: right; min-width: 0; }
+  .pill { display: inline-flex; align-items: center; gap: 7px; }
+  .pill i { width: 9px; height: 9px; border-radius: 50%; background: var(--cal-3); flex: none; }
+  .pill.on i { background: var(--amarilla); box-shadow: 0 0 0 3px rgba(255,214,10,.18); }
+  .pill.lost i { background: var(--roja); }
+  .batt { display: inline-flex; align-items: center; gap: 5px; color: var(--cal); }
+  .batt svg { width: 20px; height: 10px; }
+  .screens { position: relative; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; background: repeating-linear-gradient(180deg, var(--cesped) 0 120px, var(--cesped-2) 120px 240px); background-attachment: local; }
+  .screen { padding-bottom: 28px; animation: entra .22s ease-out; }
+  @keyframes entra { from { opacity: 0; transform: translateY(8px); } }
+  .tabbar { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--noche); border-top: 1px solid var(--cal-3); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .tabbar button { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px 7px; font-size: 12px; color: var(--cal-2); }
+  .tabbar svg { width: 24px; height: 24px; }
+  .tabbar button[aria-selected="true"] { color: var(--cal); font-weight: 700; }
+  .tabbar button[aria-selected="true"]::before { content: ""; position: absolute; left: 22%; right: 22%; top: -1px; height: 3px; background: var(--amarilla); }
+  .tabbar .badge { position: absolute; top: 5px; left: calc(50% + 9px); width: 8px; height: 8px; border-radius: 50%; background: var(--amarilla); }
+  .notice { margin: 12px 16px; padding: 10px 12px; border: 1.5px solid var(--cal); font-size: 15px; }
 
-  /* escena */
-  .stage { position: relative; background: var(--hondo); border-block: 2px solid var(--cal); aspect-ratio: 16 / 10.5; max-height: 54vh; width: 100%; overflow: hidden; }
+  /* chute: escena a pantalla completa mientras se prepara */
+  #scr-kick.hero { display: flex; flex-direction: column; height: 100%; padding-bottom: 0; }
+  .stage { position: relative; background: var(--noche); aspect-ratio: 16 / 10.5; max-height: 54vh; width: 100%; overflow: hidden; border-bottom: 2px solid var(--cal); }
+  #scr-kick.hero .stage { flex: 1 1 auto; aspect-ratio: auto; max-height: none; min-height: 300px; border-bottom: 0; }
   .stage canvas, .stage video { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .stage video { object-fit: cover; background: #000; }
-  .banner { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 14px; background: rgba(7,48,31,.86); }
-  .banner .state { font: 400 34px/1.05 var(--display); letter-spacing: .01em; }
+  .chal { position: absolute; left: 0; right: 0; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: var(--noche); border-bottom: 1px solid var(--cal-3); font-size: 14px; line-height: 1.3; }
+  .chal b { font-weight: 700; }
+  .chal .go { margin-left: auto; text-decoration: underline; text-underline-offset: 3px; font-size: 14px; white-space: nowrap; }
+  .banner { position: absolute; left: 0; right: 0; bottom: 0; min-height: 172px; padding: 14px 16px 16px; background: linear-gradient(180deg, rgba(5,35,23,0) 0, rgba(5,35,23,.9) 26px, rgba(5,35,23,.94)); }
+  .banner .state { font: 400 36px/1.05 var(--display); letter-spacing: .01em; }
   .banner .hint { margin-top: 4px; font-size: 15px; color: var(--cal-2); min-height: 1.2em; }
   .banner.go { background: var(--amarilla); color: var(--tinta); }
-  .banner.go .state { font-size: 52px; }
+  .banner.go .state { font-size: 60px; }
   .banner.go .hint { color: var(--tinta); }
   .banner.wait .state { animation: latido 1.3s ease-in-out infinite; }
   .banner.bad { background: var(--roja); }
   .banner.bad .hint { color: var(--cal); }
   @keyframes latido { 50% { opacity: .45; } }
-  .chalkbar { height: 4px; margin-top: 10px; background: var(--cal-3); }
-  .chalkbar i { display: block; height: 100%; width: 0; background: var(--cal); transition: width .15s linear; }
+  .chalkbar { height: 5px; margin-top: 12px; background: var(--cal-3); }
+  .chalkbar i { display: block; height: 100%; width: 0; background: var(--amarilla); transition: width .15s linear; }
+  .foot { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 14px; }
+  .foot span { color: var(--cal-2); margin-right: 4px; }
+  .foot button { padding: 7px 13px; border: 1.5px solid var(--cal-3); font-size: 15px; }
+  .foot button[aria-pressed="true"] { background: var(--cal); border-color: var(--cal); color: var(--tinta); font-weight: 700; }
+  .banner.go .foot span { color: var(--tinta); }
+  .banner.go .foot button { border-color: rgba(10,30,22,.35); }
+  .banner.go .foot button[aria-pressed="true"] { background: var(--tinta); border-color: var(--tinta); color: var(--amarilla); }
   .views { display: flex; gap: 6px; align-items: center; padding: 10px 16px 0; }
   .views button { font-size: 14px; padding: 8px 11px; border: 1.5px solid var(--cal-3); white-space: nowrap; }
   .views button[aria-pressed="true"] { background: var(--cal); color: var(--tinta); border-color: var(--cal); font-weight: 700; }
   .views .replay { margin-left: auto; border-color: var(--cal); }
 
   /* resultado */
+  .minibar { position: sticky; top: 0; height: 0; z-index: 4; }
+  .minibar > div { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: baseline; gap: 16px; padding: 9px 16px 10px; background: var(--hondo); border-bottom: 2px solid var(--cal); transform: translateY(-110%); visibility: hidden; transition: transform .2s ease-out, visibility 0s linear .2s; }
+  .minibar.on > div { transform: none; visibility: visible; transition: transform .2s ease-out; }
+  .minibar .t { flex: 1; min-width: 0; font: 400 19px/1.1 var(--display); letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .minibar .v { font: 400 24px/1 var(--display); white-space: nowrap; }
+  .minibar .v small { font: 700 12px var(--texto); margin-left: 3px; }
   .block { padding: 16px 16px 0; }
-  .kind { font: 400 30px/1.08 var(--display); letter-spacing: .01em; }
+  .kind { font: 400 32px/1.06 var(--display); letter-spacing: .01em; }
   .quiet { color: var(--cal-2); font-size: 14px; }
   .nums { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; margin-top: 14px; }
-  .num .n { font: 400 78px/.92 var(--display); letter-spacing: .005em; }
+  .num .n { font: 400 80px/.92 var(--display); letter-spacing: .005em; }
   .num .u { font-size: 17px; font-weight: 700; margin-left: 5px; }
   .num .c { display: block; margin-top: 6px; font-size: 14px; color: var(--cal-2); }
-  .reading { margin-top: 14px; font-size: 18px; line-height: 1.4; }
+  .num .d { display: block; margin-top: 3px; font-size: 14px; color: var(--cal); }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .chip { padding: 8px 13px; border: 1.5px solid var(--cal-3); font-size: 15px; }
+  .chip b { font-weight: 700; }
+  .chip[aria-pressed="true"] { border-color: var(--amarilla); color: var(--amarilla); font-weight: 700; }
+  .verdict { margin-top: 14px; padding: 10px 12px; font-size: 16px; }
+  .verdict.hit { background: var(--amarilla); color: var(--tinta); font-weight: 700; }
+  .verdict.miss { border: 1.5px solid var(--cal); }
+  .rtabs { display: flex; margin: 22px 16px 0; border-bottom: 2px solid var(--cal); overflow-x: auto; scrollbar-width: none; }
+  .rtabs::-webkit-scrollbar { display: none; }
+  .rtabs button { flex: 1 0 auto; padding: 11px 10px 10px; font-size: 15px; color: var(--cal-2); white-space: nowrap; }
+  .rtabs button[aria-selected="true"] { background: var(--cal); color: var(--tinta); font-weight: 700; }
+  .rp { padding: 16px 16px 0; }
+  .reading { font-size: 18px; line-height: 1.4; }
   .facts3 { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 16px; border-block: 1px solid var(--cal-3); }
   .facts3 li { padding: 10px 8px 10px 0; }
   .facts3 li + li { padding-left: 12px; border-left: 1px solid var(--cal-3); }
-  .facts3 b { display: block; font-size: 21px; line-height: 1.15; }
+  .facts3 b { display: block; font: 400 26px/1.1 var(--display); }
   .facts3 span { font-size: 13px; color: var(--cal-2); }
   .ask { margin-top: 14px; padding: 12px; border: 1.5px solid var(--cal); font-size: 15px; }
   .ask button { margin-top: 8px; }
   .rule { height: 2px; background: var(--cal); margin: 26px 16px 0; }
+  h2.title { font: 400 32px/1.06 var(--display); letter-spacing: .01em; }
   h3 { font: 700 19px/1.2 var(--texto); margin-bottom: 12px; }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .pair canvas { width: 100%; aspect-ratio: 1; display: block; }
@@ -102,11 +147,12 @@
   .notes li { margin-top: 4px; padding-left: 12px; position: relative; }
   .notes li::before { content: ""; position: absolute; left: 0; top: .62em; width: 5px; height: 5px; background: var(--cal-2); }
   .notes li.truth { color: var(--amarilla); } .notes li.truth::before { background: var(--amarilla); }
-  .bad { color: var(--cal); background: var(--roja); padding: 10px 12px; }
+  .bad { color: var(--cal); background: var(--roja); padding: 10px 12px; margin-top: 14px; }
 
   /* botones de texto y campos */
-  .btn { display: inline-block; padding: 10px 14px; border: 1.5px solid var(--cal); font-weight: 700; font-size: 15px; }
+  .btn { display: inline-block; padding: 11px 15px; border: 1.5px solid var(--cal); font-weight: 700; font-size: 15px; }
   .btn.solid { background: var(--cal); color: var(--tinta); }
+  .btn.yellow { background: var(--amarilla); border-color: var(--amarilla); color: var(--tinta); }
   .btn.warn { border-color: var(--roja); background: var(--roja); }
   .link { text-decoration: underline; text-underline-offset: 3px; font-size: 15px; padding: 6px 0; }
   .row { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -129,13 +175,20 @@
   .transport button { padding: 11px 4px; border: 1.5px solid var(--cal); font-weight: 700; font-size: 15px; }
   .transport button.solid { background: var(--cal); color: var(--tinta); }
   .cliphint { margin-top: 8px; font-size: 15px; background: var(--amarilla); color: var(--tinta); padding: 8px 10px; }
+  .empty { color: var(--cal-2); padding: 10px 0; }
 
   /* historial */
-  .marks { display: grid; grid-template-columns: repeat(3, 1fr); border-block: 1px solid var(--cal-3); margin-bottom: 14px; }
+  .marks { display: grid; grid-template-columns: repeat(3, 1fr); border-block: 1px solid var(--cal-3); margin-top: 14px; }
   .marks li { padding: 10px 8px 10px 0; }
   .marks li + li { padding-left: 12px; border-left: 1px solid var(--cal-3); }
   .marks b { display: block; font: 400 30px/1 var(--display); }
   .marks span { font-size: 13px; color: var(--cal-2); }
+  .evo { width: 100%; height: 240px; display: block; margin-top: 12px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; font-size: 13px; color: var(--cal-2); }
+  .legend i { display: inline-block; vertical-align: middle; margin-right: 6px; }
+  .legend .k1 { width: 7px; height: 7px; border-radius: 50%; background: rgba(244,247,241,.55); }
+  .legend .k2 { width: 18px; height: 2.5px; background: var(--cal); }
+  .legend .k3 { width: 9px; height: 9px; border-radius: 50%; background: var(--amarilla); }
   #history li { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--cal-3); cursor: pointer; }
   #history li:first-child { border-top: 1px solid var(--cal-3); }
   #history li.sel { box-shadow: inset 4px 0 0 var(--amarilla); padding-left: 12px; }
@@ -146,205 +199,338 @@
   #history .ico.on { color: var(--amarilla); }
   .confirm { margin-top: 10px; padding: 12px; background: var(--roja); }
 
-  /* plegables */
+  .block details.tbl-box { margin: 10px 0 0; border: 0; }
+  .block details.tbl-box summary { padding: 8px 0; font-weight: 400; font-size: 14px; color: var(--cal-2); text-decoration: underline; text-underline-offset: 3px; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .tbl th, .tbl td { text-align: right; padding: 7px 4px; border-bottom: 1px solid var(--cal-3); font-variant-numeric: tabular-nums; }
+  .tbl th { color: var(--cal-2); font-weight: 400; }
+  .tbl th:first-child, .tbl td:first-child { text-align: left; }
+
+  /* retos */
+  .stepper { display: inline-flex; align-items: center; border: 1.5px solid var(--cal-3); }
+  .stepper button { width: 38px; height: 42px; font-size: 22px; line-height: 1; }
+  .stepper output { min-width: 40px; text-align: center; font: 400 24px/1 var(--display); }
+  .range { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; font-size: 15px; color: var(--cal-2); }
+  .names { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .board { margin-top: 14px; border-top: 1px solid var(--cal-3); }
+  .prow { display: grid; grid-template-columns: 1fr auto; gap: 10px 8px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--cal-3); }
+  .prow .name { font-weight: 700; font-size: 17px; }
+  .prow .name small { display: block; font-weight: 400; font-size: 13px; color: var(--cal-2); }
+  .prow .score { font: 400 34px/1 var(--display); }
+  .prow.lead .score { color: var(--amarilla); }
+  .cells { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 7px; }
+  .cell { width: 46px; height: 46px; border-radius: 50%; border: 1.5px dashed var(--cal-3); display: grid; place-items: center; font: 400 17px/1 var(--display); color: var(--cal-2); }
+  .cell.hit { background: var(--amarilla); border: 0; color: var(--tinta); }
+  .cell.miss { border: 1.5px solid var(--cal-3); color: var(--cal-2); }
+  .cell.val { border: 1.5px solid var(--cal); color: var(--cal); }
+  .cell.best { background: var(--cal); border: 0; color: var(--tinta); }
+  .cell.now { border: 2.5px solid var(--amarilla); color: var(--amarilla); animation: latido 1.3s ease-in-out infinite; }
+  .result { margin-top: 16px; padding: 14px; background: var(--amarilla); color: var(--tinta); }
+  .result b { display: block; font: 400 30px/1.05 var(--display); }
+  #rtPast li { padding: 9px 0; border-bottom: 1px solid var(--cal-3); font-size: 15px; }
+  #rtPast li small { display: block; color: var(--cal-2); font-size: 13px; }
+
+  /* ajustes */
   details { margin: 0 16px; border-bottom: 1px solid var(--cal-3); }
-  details:first-of-type { border-top: 2px solid var(--cal); margin-top: 26px; }
+  details:first-of-type { border-top: 1px solid var(--cal-3); margin-top: 16px; }
   summary { padding: 14px 0; font-weight: 700; cursor: pointer; }
   details > div { padding-bottom: 16px; }
   details ol { counter-reset: paso; }
   details ol li { counter-increment: paso; position: relative; padding: 0 0 10px 30px; }
   details ol li::before { content: counter(paso); position: absolute; left: 0; top: 0; font: 400 20px/1.2 var(--display); }
-  #log { background: var(--hondo); color: var(--cal-2); font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; padding: 10px; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-all; margin: 10px 0 0; }
-  .ver { text-align: center; padding: 18px 16px 0; }
+  #log { background: var(--noche); color: var(--cal-2); font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; padding: 10px; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-all; margin: 10px 0 0; }
+  .ver { text-align: center; padding: 22px 16px 0; }
 
-  /* barra de acción */
-  .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--hondo); border-top: 2px solid var(--cal); padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); }
-  .dock .in { max-width: 720px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto; gap: 8px 10px; align-items: center; }
+  /* botón principal */
+  .dock { background: var(--hondo); border-top: 2px solid var(--cal); padding: 10px 12px; }
+  .dock .in { display: grid; grid-template-columns: 1fr auto; gap: 8px 10px; align-items: center; }
   .main { font: 400 clamp(18px, 5.6vw, 24px)/1 var(--display); letter-spacing: .02em; padding: 16px 10px 15px; min-height: 55px; background: var(--amarilla); color: var(--tinta); text-align: center; }
   .main.stop { background: transparent; color: var(--cal); box-shadow: inset 0 0 0 2px var(--cal); }
   .main:disabled { background: transparent; color: var(--cal-2); box-shadow: inset 0 0 0 2px var(--cal-3); cursor: default; }
-  .main:active:not(:disabled) { transform: translateY(1px); }
   .cam { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 10px; font-size: 13px; color: var(--cal-2); box-shadow: inset 0 0 0 1.5px var(--cal-3); min-width: 64px; }
   .cam svg { width: 26px; height: 26px; }
   .cam[aria-pressed="true"] { color: var(--tinta); background: var(--cal); box-shadow: none; font-weight: 700; }
   .alt { grid-column: 1 / -1; justify-self: center; }
-  #toast { position: fixed; left: 12px; right: 12px; bottom: calc(var(--dock) + env(safe-area-inset-bottom, 0px) + 8px); max-width: 696px; margin: 0 auto; z-index: 6; background: var(--cal); color: var(--tinta); padding: 12px 14px; font-size: 15px; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
-  @media (max-width: 370px) { .num .n { font-size: 66px; } .kind { font-size: 27px; } .banner.go .state { font-size: 44px; } }
-  @media (prefers-reduced-motion: reduce) { .banner.wait .state { animation: none; } .chalkbar i { transition: none; } }
+  #toast { position: fixed; left: 12px; right: 12px; bottom: 150px; max-width: 696px; margin: 0 auto; z-index: 6; background: var(--cal); color: var(--tinta); padding: 12px 14px; font-size: 15px; box-shadow: 0 8px 26px rgba(0,0,0,.35); animation: sube .2s ease-out; }
+  @keyframes sube { from { opacity: 0; transform: translateY(10px); } }
+  @media (max-width: 370px) { .num .n { font-size: 68px; } .kind, h2.title { font-size: 28px; } .banner.go .state { font-size: 50px; } .cell { width: 42px; height: 42px; } }
+  @media (prefers-reduced-motion: reduce) { .banner.wait .state, .cell.now { animation: none; } .chalkbar i, .minibar > div { transition: none; } .screen, #toast { animation: none; } }
 </style>
 </head>
 <body>
-<div class="app">
-  <header class="top">
-    <h1>Smart Ball</h1>
-    <p class="conn"><span id="conn">Sin balón</span> <button class="link" id="btnDisc" hidden>Desconectar</button></p>
+<div class="shell">
+  <header class="bar">
+    <div class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0A4F36"/><path d="M11 50 C 21 18, 41 13, 51 25" fill="none" stroke="#FFD60A" stroke-width="5" stroke-linecap="round"/><path d="M10 51 H 54" stroke="#F4F7F1" stroke-width="3" stroke-linecap="round"/><circle cx="51" cy="25" r="8.5" fill="#fff" stroke="#0A1E16" stroke-width="2"/><polygon points="51,20.6 55.2,23.6 53.6,28.5 48.4,28.5 46.8,23.6" fill="#0A1E16"/></svg>
+      <h1>Smart Ball</h1>
+    </div>
+    <div class="conn"><span class="pill" id="pill"><i></i><span id="conn">Sin balón</span><span class="batt" id="batt" hidden><svg viewBox="0 0 20 10" aria-hidden="true"><rect x=".75" y=".75" width="16" height="8.5" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="17.6" y="3.1" width="1.7" height="3.8" rx=".6" fill="currentColor"/><rect id="battLvl" x="2.3" y="2.3" width="12.9" height="5.4" rx=".6" fill="currentColor"/></svg><span id="battPct"></span></span></span></div>
   </header>
-  <p class="notice" id="support" hidden></p>
 
-  <section class="stage" id="stage" aria-label="Campo y trayectoria">
-    <canvas id="scene"></canvas>
-    <video id="preview" playsinline muted hidden></video>
-    <div class="banner" id="banner" role="status" aria-live="polite">
-      <div class="state" id="statusText"></div>
-      <div class="hint" id="statusSub"></div>
-      <div class="chalkbar" id="progress" hidden><i id="progressBar"></i></div>
+  <main class="screens" id="screens">
+    <!-- CHUTE -->
+    <section class="screen hero" id="scr-kick" data-scr="kick" role="tabpanel" aria-label="Chute">
+      <div class="minibar" id="minibar" aria-hidden="true"><div><span class="t" id="mbType"></span><span class="v"><span id="mbSpeed"></span><small>km/h</small></span><span class="v"><span id="mbSpin"></span><small>rpm</small></span></div></div>
+      <p class="notice" id="support" hidden></p>
+      <section class="stage" id="stage" aria-label="Campo y trayectoria">
+        <canvas id="scene"></canvas>
+        <video id="preview" playsinline muted hidden></video>
+        <div class="chal" id="chalStrip" hidden></div>
+        <div class="banner" id="banner" role="status" aria-live="polite">
+          <div class="state" id="statusText"></div>
+          <div class="hint" id="statusSub"></div>
+          <div class="chalkbar" id="progress" hidden><i id="progressBar"></i></div>
+          <div class="foot" id="footSel" role="group" aria-label="Pie de golpeo" hidden><span>Pie</span><button data-foot="left" aria-pressed="false">Izquierdo</button><button data-foot="right" aria-pressed="false">Derecho</button></div>
+        </div>
+      </section>
+      <div class="views" id="views" hidden>
+        <button data-view="behind" aria-pressed="true">Perspectiva</button>
+        <button data-view="side" aria-pressed="false">Lateral</button>
+        <button data-view="top" aria-pressed="false">Arriba</button>
+        <button class="replay" id="btnReplay">Repetir</button>
+      </div>
+
+      <section id="result" hidden>
+        <div class="block" id="resHead">
+          <h2 class="kind" id="resType"></h2>
+          <p class="quiet" id="resWhen"></p>
+          <div id="resBody">
+            <div class="nums" id="nums">
+              <div class="num"><span class="n" id="nSpeed"></span><span class="u">km/h</span><span class="c">velocidad de salida, estimada</span><span class="d" id="dSpeed"></span></div>
+              <div class="num"><span class="n" id="nSpin"></span><span class="u">rpm</span><span class="c" id="cSpin"></span><span class="d" id="dSpin"></span></div>
+            </div>
+          </div>
+          <div class="meta">
+            <button class="chip" id="resFoot" aria-label="Cambiar el pie de golpeo">Pie sin indicar</button>
+            <button class="chip" id="resFav" aria-pressed="false">★ Favorito</button>
+          </div>
+          <p class="verdict" id="resChal" hidden></p>
+          <p class="bad" id="resBad" hidden></p>
+        </div>
+
+        <nav class="rtabs" id="rtabs" role="tablist" aria-label="Detalle del chute">
+          <button role="tab" data-rp="vuelo" aria-selected="true">Vuelo</button>
+          <button role="tab" data-rp="giro" aria-selected="false">Giro y golpeo</button>
+          <button role="tab" data-rp="falta" aria-selected="false">Falta</button>
+          <button role="tab" data-rp="video" aria-selected="false" id="rtVideo" hidden>Vídeo</button>
+        </nav>
+
+        <div class="rp" data-rp="vuelo" role="tabpanel">
+          <p class="reading" id="resReading"></p>
+          <ul class="facts3" id="flightFacts"></ul>
+          <p class="quiet" id="flightNote" style="margin-top:8px"></p>
+          <div class="ask" id="landAsk" hidden></div>
+        </div>
+
+        <div class="rp" data-rp="giro" role="tabpanel" hidden>
+          <div class="pair">
+            <figure><canvas id="spinCanvas"></canvas><figcaption id="spinCap"></figcaption></figure>
+            <figure><canvas id="strikeCanvas"></canvas><figcaption id="strikeCap"></figcaption></figure>
+          </div>
+          <dl class="split" id="split"></dl>
+        </div>
+
+        <div class="rp" data-rp="falta" role="tabpanel" hidden>
+          <div class="seg" id="distSeg" role="group" aria-label="Distancia a la portería">
+            <span class="lab">Portería a</span>
+            <button data-d="16" aria-pressed="false">16 m</button><button data-d="20" aria-pressed="true">20 m</button><button data-d="25" aria-pressed="false">25 m</button><button data-d="30" aria-pressed="false">30 m</button>
+          </div>
+          <label class="check" style="margin-top:6px"><input type="checkbox" id="set_wall"> Barrera a 9,15 m</label>
+          <ul class="lines" id="fkFacts"></ul>
+        </div>
+
+        <div class="rp" data-rp="video" role="tabpanel" hidden>
+          <div id="clipBlock" hidden>
+            <div class="clipwrap" id="clipWrap">
+              <video id="clipVideo" playsinline preload="auto"></video>
+              <canvas id="clipOver" aria-hidden="true"></canvas>
+              <div class="mark" id="mark0" hidden></div><div class="mark" id="mark1" hidden></div>
+              <div class="stat" id="clipStat"></div>
+            </div>
+            <p class="cliphint" id="clipHint" hidden></p>
+            <p class="quiet" id="clipNote" style="margin-top:8px" hidden>La línea amarilla es la trayectoria que calculó el balón, colocada sobre el vídeo con tus dos toques. Si el aro acompaña al balón, el cálculo va bien.</p>
+            <input type="range" id="vSeek" min="0" max="1000" value="0" aria-label="Posición del vídeo" style="margin-top:8px">
+            <div class="transport">
+              <button id="vBack" aria-label="Fotograma anterior">‹</button>
+              <button id="vPlay" class="solid">Ver</button>
+              <button id="vFwd" aria-label="Fotograma siguiente">›</button>
+              <button id="vKick">Golpeo</button>
+              <button id="vRate" aria-label="Velocidad de reproducción">¼×</button>
+            </div>
+            <div class="row" style="margin-top:10px">
+              <button class="link" id="vMeasure">Medir el ángulo de salida</button>
+              <button class="link" id="vSetKick">Fijar el golpeo aquí</button>
+              <button class="link" id="vShare">Compartir vídeo</button>
+              <button class="link" id="vDelete">Borrar vídeo</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="block">
+          <ul class="notes" id="resNotes"></ul>
+          <div style="margin-top:16px">
+            <input type="text" id="tag" placeholder="Etiqueta: interior, empeine, barrera…" maxlength="80" aria-label="Etiqueta del chute">
+            <div class="chips"><button>Interior</button><button>Empeine</button><button>Exterior</button><button>Puntera</button><button>Barrera</button></div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- HISTORIAL -->
+    <section class="screen" id="scr-hist" data-scr="hist" role="tabpanel" aria-label="Historial" hidden>
+      <div class="block">
+        <h2 class="title">Historial</h2>
+        <ul class="marks" id="marks" hidden></ul>
+      </div>
+      <div class="block">
+        <h3>Evolución por semanas</h3>
+        <div class="seg" id="evoMetric" role="group" aria-label="Qué medir"><button data-m="speed" aria-pressed="true">Velocidad</button><button data-m="spin" aria-pressed="false">Giro</button><button data-m="top" aria-pressed="false">Liftado</button></div>
+        <div class="seg" id="evoFoot" role="group" aria-label="Pie" style="margin-top:6px"><button data-f="all" aria-pressed="true">Los dos pies</button><button data-f="left" aria-pressed="false">Izquierdo</button><button data-f="right" aria-pressed="false">Derecho</button></div>
+        <canvas class="evo" id="evoChart" role="img" aria-label="Evolución semanal; toca una semana o usa las flechas para ver sus valores" tabindex="0"></canvas>
+        <p class="legend" id="evoLegend"><span><i class="k1"></i>cada chute</span><span><i class="k2"></i>media de la semana</span><span><i class="k3"></i>el mejor de la semana</span></p>
+        <p class="quiet" id="evoNote" style="margin-top:6px" aria-live="polite"></p>
+        <details class="tbl-box" id="evoTableBox" hidden><summary>Ver en tabla, en <span id="evoTableUnit"></span></summary><table class="tbl" id="evoTable"></table></details>
+      </div>
+      <div class="block">
+        <h3>Chutes guardados <span class="quiet" id="histCount"></span></h3>
+        <ul id="history"></ul>
+        <div class="row" style="margin-top:14px">
+          <button class="btn" id="btnShare">Compartir datos</button>
+          <button class="btn" id="btnCsv">Excel (CSV)</button>
+          <button class="btn" id="btnJson">Datos completos</button>
+          <button class="btn" id="btnImport">Importar</button>
+          <button class="btn warn" id="btnClear">Borrar todo</button>
+        </div>
+        <div class="confirm" id="confirmClear" hidden>¿Borrar todos los chutes y vídeos de este móvil? No se puede deshacer.
+          <div class="row" style="margin-top:10px"><button class="btn solid" id="btnClearYes">Sí, borrar</button><button class="btn" id="btnClearNo">No</button></div>
+        </div>
+        <input type="file" id="fileIn" accept=".json,application/json" hidden>
+      </div>
+    </section>
+
+    <!-- RETOS -->
+    <section class="screen" id="scr-retos" data-scr="retos" role="tabpanel" aria-label="Retos" hidden>
+      <div class="block" id="retoSetup">
+        <h2 class="title">Retos</h2>
+        <p class="quiet" style="margin-top:6px">Una tanda de chutes con un objetivo. Solo o por turnos entre dos, como en una tanda de penaltis.</p>
+        <h3 style="margin-top:20px">Qué cuenta</h3>
+        <div class="seg" id="rtType" role="group" aria-label="Tipo de reto">
+          <button data-t="range" aria-pressed="true">Velocidad en un rango</button><button data-t="speed" aria-pressed="false">El más rápido</button><button data-t="spin" aria-pressed="false">El de más giro</button><button data-t="top" aria-pressed="false">El más liftado</button>
+        </div>
+        <div class="range" id="rtRange">
+          <span>De</span>
+          <span class="stepper"><button data-step="min:-5" aria-label="Bajar el mínimo">−</button><output id="rtMin">60</output><button data-step="min:5" aria-label="Subir el mínimo">+</button></span>
+          <span>a</span>
+          <span class="stepper"><button data-step="max:-5" aria-label="Bajar el máximo">−</button><output id="rtMax">70</output><button data-step="max:5" aria-label="Subir el máximo">+</button></span>
+          <span>km/h</span>
+        </div>
+        <h3 style="margin-top:20px">Jugadores</h3>
+        <div class="seg" id="rtPlayers" role="group" aria-label="Jugadores"><button data-p="1" aria-pressed="true">Uno</button><button data-p="2" aria-pressed="false">Dos, por turnos</button></div>
+        <div class="names"><input type="text" id="rtName1" placeholder="Jugador 1" maxlength="20" aria-label="Nombre del jugador 1"><input type="text" id="rtName2" placeholder="Jugador 2" maxlength="20" aria-label="Nombre del jugador 2"></div>
+        <h3 style="margin-top:20px">Chutes por jugador</h3>
+        <div class="seg" id="rtN" role="group" aria-label="Chutes por jugador"><button data-n="3" aria-pressed="false">3</button><button data-n="5" aria-pressed="true">5</button><button data-n="10" aria-pressed="false">10</button></div>
+        <button class="btn yellow" id="rtStart" style="margin-top:22px">Empezar el reto</button>
+        <h3 style="margin-top:28px">Retos anteriores</h3>
+        <ul id="rtPast"></ul>
+      </div>
+      <div class="block" id="retoBoard" hidden>
+        <h2 class="title" id="rbTitle"></h2>
+        <p class="quiet" id="rbSub" style="margin-top:4px"></p>
+        <div class="board" id="rbGrid"></div>
+        <div class="result" id="rbResult" hidden></div>
+        <p id="rbTurn" style="margin-top:14px; font-size:18px"></p>
+        <div class="row" style="margin-top:14px">
+          <button class="btn yellow" id="rbGo">Ir a chutar</button>
+          <button class="btn yellow" id="rbAgain" hidden>Repetir el reto</button>
+          <button class="btn" id="rbUndo">Anular el último chute</button>
+          <button class="btn" id="rbQuit">Terminar el reto</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- AJUSTES -->
+    <section class="screen" id="scr-more" data-scr="more" role="tabpanel" aria-label="Ajustes" hidden>
+      <div class="block"><h2 class="title">Ajustes</h2></div>
+      <div class="block" id="ballBox">
+        <h3>Balón</h3>
+        <p class="quiet" id="ballInfo">Sin conectar.</p>
+        <button class="btn" id="btnDisc" hidden style="margin-top:10px">Desconectar el balón</button>
+      </div>
+      <details open>
+        <summary>Cómo se usa</summary>
+        <div>
+          <ol>
+            <li><b>Carga.</b> Pon el balón en su base alineando los dibujos. Luz verde con parpadeo largo: está cargando. Parpadeo rápido: mal alineado. Luces apagadas: cargado (tarda una hora).</li>
+            <li><b>Conecta.</b> En Google Chrome, con Bluetooth y Ubicación activados, pulsa «Conectar balón» y elige el que empieza por DB.</li>
+            <li><b>Coloca.</b> Balón en el suelo con el logo hacia arriba y las flechas apuntando al objetivo, siempre igual.</li>
+            <li><b>Chuta.</b> Pulsa «Preparar chute», elige el pie, no toques el balón hasta el silbato y chuta. Tiene que subir al menos 1 m y recorrer 10 m sin botar ni rodar.</li>
+            <li><b>Recoge el balón.</b> Si se aleja más de unos 10 m se corta la conexión; el chute queda guardado dentro y se descarga solo al acercarlo al móvil.</li>
+          </ol>
+          <p><b>Vídeo.</b> Activa «Vídeo» y apoya el móvil en un trípode. Graba solo unos segundos antes y después de cada chute, y lo puedes ver a cámara lenta, fotograma a fotograma. Si lo grabas de lado (perpendicular al tiro y con el móvil derecho), «Medir el ángulo de salida» fija la altura de la trayectoria y la dibuja encima del vídeo.</p>
+          <p style="margin-top:10px"><b>Retos.</b> En la pestaña Retos eliges qué cuenta, uno o dos jugadores y cuántos chutes. Cada chute se apunta al jugador al que le toca; si uno sale mal, «Anular el último chute» lo quita del marcador.</p>
+          <p style="margin-top:10px"><b>Qué es medido y qué es estimado.</b> El giro en rpm y la inclinación del eje salen directamente del sensor. La velocidad, el reparto liftado, rosca y bala, y el efecto del giro en la trayectoria se calculan con un modelo aerodinámico. El ángulo de salida es lo menos seguro con el balón solo: lo fijan el primer bote, si entra en el segundo que graba el balón, o el vídeo.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Preferencias</summary>
+        <div>
+          <label class="check"><input type="checkbox" id="set_openField"><span>Campo abierto<small>El balón bota en el suelo antes de tocar red, pared o persona: uso el primer bote para afinar la trayectoria.</small></span></label>
+          <label class="check"><input type="checkbox" id="set_sound"> Silbato y pitidos</label>
+          <label class="check"><input type="checkbox" id="set_speak"> Leer el resultado en voz alta</label>
+          <label class="check"><input type="checkbox" id="set_vibrate"> Vibración</label>
+          <label class="check"><input type="checkbox" id="set_camAudio"><span>Grabar el sonido<small>El chasquido del golpeo sincroniza el vídeo con los datos.</small></span></label>
+          <label class="check"><input type="checkbox" id="set_cam60"><span>Vídeo a 60 imágenes por segundo<small>Si el móvil lo permite. Ocupa más.</small></span></label>
+          <p class="quiet" id="clipUsage" style="margin-top:8px"></p>
+        </div>
+      </details>
+      <details id="diag">
+        <summary>Diagnóstico</summary>
+        <div>
+          <p class="quiet">Si algo falla, pulsa «Copiar registro» y pégamelo.</p>
+          <div class="row" style="margin-top:10px">
+            <button class="btn" id="btnCopyLog">Copiar registro</button>
+            <button class="btn" id="btnReadStatus">Leer estado</button>
+            <button class="btn" id="btnAnyDevice">Buscar cualquier dispositivo</button>
+            <button class="btn" id="btnRate">Fijar muestreo 1 ms</button>
+            <button class="btn" id="btnForce">Descargar lo que tenga el balón</button>
+          </div>
+          <pre id="log"></pre>
+        </div>
+      </details>
+      <p class="quiet ver">Smart Ball, versión <span id="ver"></span>. Proyecto personal sin relación con adidas.</p>
+    </section>
+  </main>
+
+  <div class="dock" id="dock">
+    <div class="in">
+      <button class="main" id="btnMain">Conectar balón</button>
+      <button class="cam" id="btnCam" aria-pressed="false" aria-label="Grabar vídeo de cada chute">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2.5" y="6.5" width="13" height="11"/><path d="M15.5 10.5l6-3v9l-6-3z"/></svg>
+        Vídeo
+      </button>
+      <button class="link alt" id="btnAlt" hidden></button>
     </div>
-  </section>
-  <div class="views" id="views" hidden>
-    <button data-view="behind" aria-pressed="true">Perspectiva</button>
-    <button data-view="side" aria-pressed="false">Lateral</button>
-    <button data-view="top" aria-pressed="false">Arriba</button>
-    <button class="replay" id="btnReplay">Repetir</button>
   </div>
 
-  <section id="result" hidden>
-    <div class="block">
-      <h2 class="kind" id="resType"></h2>
-      <p class="quiet" id="resWhen"></p>
-      <div id="resBody">
-        <div class="nums">
-          <div class="num"><span class="n" id="nSpeed"></span><span class="u">km/h</span><span class="c">velocidad de salida, estimada</span></div>
-          <div class="num"><span class="n" id="nSpin"></span><span class="u">rpm</span><span class="c" id="cSpin"></span></div>
-        </div>
-        <p class="reading" id="resReading"></p>
-        <ul class="facts3" id="flightFacts"></ul>
-        <p class="quiet" id="flightNote" style="margin-top:8px"></p>
-        <div class="ask" id="landAsk" hidden></div>
-      </div>
-      <p class="bad" id="resBad" hidden></p>
-    </div>
-
-    <div id="clipBlock" hidden>
-      <div class="rule"></div>
-      <div class="block">
-        <h3>El chute en vídeo</h3>
-        <div class="clipwrap" id="clipWrap">
-          <video id="clipVideo" playsinline preload="auto"></video>
-          <canvas id="clipOver" aria-hidden="true"></canvas>
-          <div class="mark" id="mark0" hidden></div><div class="mark" id="mark1" hidden></div>
-          <div class="stat" id="clipStat"></div>
-        </div>
-        <p class="cliphint" id="clipHint" hidden></p>
-        <p class="quiet" id="clipNote" style="margin-top:8px" hidden>La línea amarilla es la trayectoria que calculó el balón, colocada sobre el vídeo con tus dos toques. Si el aro acompaña al balón, el cálculo va bien.</p>
-        <input type="range" id="vSeek" min="0" max="1000" value="0" aria-label="Posición del vídeo" style="margin-top:8px">
-        <div class="transport">
-          <button id="vBack" aria-label="Fotograma anterior">‹</button>
-          <button id="vPlay" class="solid">Ver</button>
-          <button id="vFwd" aria-label="Fotograma siguiente">›</button>
-          <button id="vKick">Golpeo</button>
-          <button id="vRate" aria-label="Velocidad de reproducción">¼×</button>
-        </div>
-        <div class="row" style="margin-top:10px">
-          <button class="link" id="vMeasure">Medir el ángulo de salida</button>
-          <button class="link" id="vSetKick">Fijar el golpeo aquí</button>
-          <button class="link" id="vShare">Compartir vídeo</button>
-          <button class="link" id="vDelete">Borrar vídeo</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="detailBlock">
-      <div class="rule"></div>
-      <div class="block">
-        <h3>Cómo giraba y dónde le diste</h3>
-        <div class="pair">
-          <figure><canvas id="spinCanvas"></canvas><figcaption id="spinCap"></figcaption></figure>
-          <figure><canvas id="strikeCanvas"></canvas><figcaption id="strikeCap"></figcaption></figure>
-        </div>
-        <dl class="split" id="split"></dl>
-      </div>
-
-      <div class="rule"></div>
-      <div class="block">
-        <h3>Si fuera una falta</h3>
-        <div class="seg" id="distSeg" role="group" aria-label="Distancia a la portería">
-          <span class="lab">Portería a</span>
-          <button data-d="16" aria-pressed="false">16 m</button><button data-d="20" aria-pressed="true">20 m</button><button data-d="25" aria-pressed="false">25 m</button><button data-d="30" aria-pressed="false">30 m</button>
-        </div>
-        <label class="check"><input type="checkbox" id="set_wall"> Barrera a 9,15 m</label>
-        <ul class="lines" id="fkFacts"></ul>
-      </div>
-    </div>
-
-    <div class="block">
-      <ul class="notes" id="resNotes"></ul>
-      <div style="margin-top:16px">
-        <input type="text" id="tag" placeholder="Etiqueta: interior, empeine, barrera…" maxlength="80" aria-label="Etiqueta del chute">
-        <div class="chips"><button>Interior</button><button>Empeine</button><button>Exterior</button><button>Pierna izquierda</button><button>Pierna derecha</button></div>
-      </div>
-    </div>
-  </section>
-
-  <div class="rule"></div>
-  <section class="block">
-    <h3>Chutes guardados <span class="quiet" id="histCount"></span></h3>
-    <ul class="marks" id="marks" hidden></ul>
-    <ul id="history"></ul>
-    <div class="row" style="margin-top:14px">
-      <button class="btn" id="btnShare">Compartir datos</button>
-      <button class="btn" id="btnCsv">Excel (CSV)</button>
-      <button class="btn" id="btnJson">Datos completos</button>
-      <button class="btn" id="btnImport">Importar</button>
-      <button class="btn warn" id="btnClear">Borrar todo</button>
-    </div>
-    <div class="confirm" id="confirmClear" hidden>¿Borrar todos los chutes y vídeos de este móvil? No se puede deshacer.
-      <div class="row" style="margin-top:10px"><button class="btn solid" id="btnClearYes">Sí, borrar</button><button class="btn" id="btnClearNo">No</button></div>
-    </div>
-    <input type="file" id="fileIn" accept=".json,application/json" hidden>
-  </section>
-
-  <details>
-    <summary>Cómo se usa</summary>
-    <div>
-      <ol>
-        <li><b>Carga.</b> Pon el balón en su base alineando los dibujos. Luz verde con parpadeo largo: está cargando. Parpadeo rápido: mal alineado. Luces apagadas: cargado (tarda una hora).</li>
-        <li><b>Conecta.</b> En Google Chrome, con Bluetooth y Ubicación activados, pulsa «Conectar balón» y elige el que empieza por DB.</li>
-        <li><b>Coloca.</b> Balón en el suelo con el logo hacia arriba y las flechas apuntando al objetivo, siempre igual. Así lo pedía la app original.</li>
-        <li><b>Chuta.</b> Pulsa «Preparar chute», no lo toques hasta el silbato y chuta. Tiene que subir al menos 1 m y recorrer 10 m sin botar ni rodar.</li>
-        <li><b>Recoge el balón.</b> Si se aleja más de unos 10 m se corta la conexión; el chute queda guardado dentro y se descarga solo al acercarlo al móvil.</li>
-      </ol>
-      <p><b>Vídeo.</b> Activa «Vídeo» y apoya el móvil en un trípode. Graba solo unos segundos antes y después de cada chute, y lo puedes ver a cámara lenta, fotograma a fotograma. Si lo grabas de lado (perpendicular al tiro y con el móvil derecho), «Medir el ángulo de salida» fija la altura de la trayectoria y la dibuja encima del vídeo.</p>
-      <p style="margin-top:10px"><b>Qué es medido y qué es estimado.</b> El giro en rpm y la inclinación del eje salen directamente del sensor. La velocidad, el reparto liftado, rosca y bala, y el efecto del giro en la trayectoria se calculan con un modelo aerodinámico. El ángulo de salida es lo menos seguro con el balón solo: lo fijan el primer bote, si entra en el segundo que graba el balón, o el vídeo.</p>
-    </div>
-  </details>
-  <details>
-    <summary>Ajustes</summary>
-    <div>
-      <label class="check"><input type="checkbox" id="set_openField"><span>Campo abierto<small>El balón bota en el suelo antes de tocar red, pared o persona: uso el primer bote para afinar la trayectoria.</small></span></label>
-      <label class="check"><input type="checkbox" id="set_sound"> Silbato y pitidos</label>
-      <label class="check"><input type="checkbox" id="set_speak"> Leer el resultado en voz alta</label>
-      <label class="check"><input type="checkbox" id="set_vibrate"> Vibración</label>
-      <label class="check"><input type="checkbox" id="set_camAudio"><span>Grabar el sonido<small>El chasquido del golpeo sincroniza el vídeo con los datos.</small></span></label>
-      <label class="check"><input type="checkbox" id="set_cam60"><span>Vídeo a 60 imágenes por segundo<small>Si el móvil lo permite. Ocupa más.</small></span></label>
-      <p class="quiet" id="clipUsage" style="margin-top:8px"></p>
-    </div>
-  </details>
-  <details id="diag">
-    <summary>Diagnóstico</summary>
-    <div>
-      <p class="quiet">Si algo falla, pulsa «Copiar registro» y pégamelo.</p>
-      <div class="row" style="margin-top:10px">
-        <button class="btn" id="btnCopyLog">Copiar registro</button>
-        <button class="btn" id="btnReadStatus">Leer estado</button>
-        <button class="btn" id="btnAnyDevice">Buscar cualquier dispositivo</button>
-        <button class="btn" id="btnRate">Fijar muestreo 1 ms</button>
-        <button class="btn" id="btnForce">Descargar lo que tenga el balón</button>
-      </div>
-      <pre id="log"></pre>
-    </div>
-  </details>
-  <p class="quiet ver">Smart Ball, versión <span id="ver"></span>. Proyecto personal sin relación con adidas.</p>
-</div>
-
-<div class="dock">
-  <div class="in">
-    <button class="main" id="btnMain">Conectar balón</button>
-    <button class="cam" id="btnCam" aria-pressed="false" aria-label="Grabar vídeo de cada chute">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2.5" y="6.5" width="13" height="11"/><path d="M15.5 10.5l6-3v9l-6-3z"/></svg>
-      Vídeo
+  <nav class="tabbar" id="tabs" role="tablist" aria-label="Secciones">
+    <button role="tab" data-scr="kick" aria-selected="true" aria-controls="scr-kick">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8.2l3.6 2.6-1.4 4.2H9.8L8.4 10.8z"/><path d="M12 3v5.2M15.6 10.8l5.1-1.7M14.2 15l3.1 4.3M9.8 15l-3.1 4.3M8.4 10.8L3.3 9.1"/></svg>
+      Chute
     </button>
-    <button class="link alt" id="btnAlt" hidden></button>
-  </div>
+    <button role="tab" data-scr="hist" aria-selected="false" aria-controls="scr-hist">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 20.5h17"/><path d="M5 16l4.5-5 3.5 3 6-7.5"/><path d="M15 6.5h4v4"/></svg>
+      Historial
+    </button>
+    <button role="tab" data-scr="retos" aria-selected="false" aria-controls="scr-retos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 4h9v5a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 6H4.5a3 3 0 0 0 3.2 3.9M16.5 6h3a3 3 0 0 1-3.2 3.9"/><path d="M12 13.5V17M8.5 20.5h7M9.5 17h5v3.5h-5z"/></svg>
+      Retos
+      <i class="badge" id="tabBadge" hidden></i>
+    </button>
+    <button role="tab" data-scr="more" aria-selected="false" aria-controls="scr-more">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
+      Ajustes
+    </button>
+  </nav>
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
@@ -1227,7 +1413,8 @@
 
 </script>
 <script>
-/* scene.js — dibujo en canvas: el campo con la trayectoria (tres vistas), el balón girando y el punto de golpeo.
+/* scene.js — dibujo en canvas: el campo con la trayectoria (vista del lanzador, perspectiva, lateral y
+ * desde arriba), el balón en 3D girando sobre su eje real y el punto de golpeo.
  * Mundo: x hacia el objetivo, y a la izquierda, z arriba; el balón sale del origen. */
 (function (root) {
   'use strict';
@@ -1239,8 +1426,12 @@
   };
   const FONT = '"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
   const GOAL_W = 7.32, GOAL_H = 2.44, WALL_X = 9.15, WALL_H = 1.8, RB = SB.PHYS.R;
+  const WALL_YS = [-0.93, -0.31, 0.31, 0.93];
   const reducedMotion = () => !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const es = (x, d) => (x == null || !isFinite(x) ? '—' : x.toFixed(d == null ? 1 : d).replace('.', ','));
+  const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const lerp3 = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
 
   function fit(cv) {
     if (!cv || !cv.getContext) return null;
@@ -1257,6 +1448,75 @@
     return { ctx, w, h };
   }
 
+  // ------------------------------------------------------------------ balón clásico: icosaedro truncado
+  // 12 pentágonos oscuros y 20 hexágonos blancos; costuras en las aristas.
+  const BALL = (() => {
+    const ph = (1 + Math.sqrt(5)) / 2, raw = [];
+    for (const a of [-1, 1]) for (const b of [-1, 1]) raw.push([0, a, b * ph], [a, b * ph, 0], [a * ph, 0, b]);
+    const U = raw.map((v) => V.unit(v));
+    const edge = Math.min(...U.slice(1).map((v) => V.norm(V.sub(v, U[0]))));
+    const nb = U.map((p) => U.filter((q) => q !== p && Math.abs(V.norm(V.sub(p, q)) - edge) < 1e-6));
+    const mix = (p, q, t) => V.unit(V.add(V.mul(p, 1 - t), V.mul(q, t)));
+    const arc = (p, q, n) => { const out = []; for (let i = 0; i < n; i++) out.push(mix(p, q, i / n)); return out; };
+    const tv = (p, q) => mix(p, q, 1 / 3);   // vértice del truncado sobre la arista p-q
+    const pents = U.map((p, i) => {
+      const e1 = V.perp(p), e2 = V.cross(p, e1), ang = (q) => Math.atan2(V.dot(q, e2), V.dot(q, e1));
+      const verts = nb[i].slice().sort((x, y) => ang(x) - ang(y)).map((q) => tv(p, q));
+      const outline = []; verts.forEach((v, k) => outline.push(...arc(v, verts[(k + 1) % 5], 5)));
+      return { c: p, outline };
+    });
+    const seams = [];
+    U.forEach((p, i) => nb[i].forEach((q) => { if (U.indexOf(q) > i) seams.push(arc(tv(p, q), tv(q, p), 5).concat([tv(q, p)])); }));
+    return { pents, seams };
+  })();
+  const LIGHT_VIEW = V.unit([-0.42, 0.62, 0.66]);   // luz arriba a la izquierda, de frente
+
+  // toView: vector unitario del balón → [x a la derecha, y arriba, z hacia quien mira]
+  function drawBall3D(ctx, cx, cy, r, toView, light) {
+    const L = light || LIGHT_VIEW;
+    const hx = cx + L[0] * r * 0.48, hy = cy - L[1] * r * 0.48;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    const g = ctx.createRadialGradient(hx, hy, r * 0.04, cx, cy, r);
+    g.addColorStop(0, '#FFFFFF'); g.addColorStop(0.5, '#EEF2EF'); g.addColorStop(0.82, '#C6D1CA'); g.addColorStop(1, '#8F9F96');
+    ctx.fillStyle = g; ctx.fill();
+    ctx.clip();
+    const scr = (q) => { let x = q[0], y = q[1]; if (q[2] < 0) { const n = Math.hypot(x, y) || 1; x /= n; y /= n; } return [cx + x * r, cy - y * r]; };
+    if (r >= 12) {   // costuras
+      ctx.strokeStyle = 'rgba(60,82,72,0.38)'; ctx.lineWidth = Math.max(0.6, r * 0.014); ctx.beginPath();
+      for (const s of BALL.seams) {
+        let on = false;
+        for (const v of s) { const q = toView(v); if (q[2] < 0.03) { on = false; continue; } const P = scr(q); if (on) ctx.lineTo(P[0], P[1]); else ctx.moveTo(P[0], P[1]); on = true; }
+      }
+      ctx.stroke();
+    }
+    for (const p of BALL.pents) {
+      const c = toView(p.c); if (c[2] < -0.45) continue;
+      const k = 0.25 + 0.75 * Math.max(0, c[0] * L[0] + c[1] * L[1] + c[2] * L[2]);
+      ctx.fillStyle = `rgb(${Math.round(12 + 50 * k)},${Math.round(28 + 48 * k)},${Math.round(22 + 44 * k)})`;
+      ctx.beginPath();
+      p.outline.forEach((v, i) => { const P = scr(toView(v)); if (i) ctx.lineTo(P[0], P[1]); else ctx.moveTo(P[0], P[1]); });
+      ctx.closePath(); ctx.fill();
+    }
+    const s = ctx.createRadialGradient(hx, hy, 0, hx, hy, r * 0.62);
+    s.addColorStop(0, 'rgba(255,255,255,0.55)'); s.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = s; ctx.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+    const rim = ctx.createRadialGradient(cx - L[0] * r * 0.18, cy + L[1] * r * 0.18, r * 0.5, cx, cy, r * 1.02);
+    rim.addColorStop(0, 'rgba(5,28,18,0)'); rim.addColorStop(1, 'rgba(5,28,18,0.45)');
+    ctx.fillStyle = rim; ctx.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(10,30,22,0.7)'; ctx.lineWidth = Math.max(1, r * 0.022);
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+  }
+  function groundShadow(ctx, x, y, rx, ry, alpha) {
+    if (!(rx > 0.5)) return;
+    ctx.save(); ctx.translate(x, y); ctx.scale(1, Math.max(0.05, ry / rx));
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+    g.addColorStop(0, `rgba(0,16,9,${alpha})`); g.addColorStop(0.6, `rgba(0,16,9,${alpha * 0.55})`); g.addColorStop(1, 'rgba(0,16,9,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, rx, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  }
+  const REST_AXIS = V.unit([0.3, -0.55, 0.78]), REST_ANG = 0.9;   // orientación del balón en reposo
+
   // ------------------------------------------------------------------ escena del campo
   class PitchScene {
     constructor(canvas) {
@@ -1264,8 +1524,11 @@
       this.goalDist = 20; this.showWall = true;
       this.t = null;            // instante de la animación (s desde el golpeo); null = trayectoria completa
       this.raf = 0; this.rate = 0.5; this.onEnd = null;
+      this.hero = true;         // vista del lanzador, sin trayectoria, mientras se prepara el chute
+      this.blend = 1;           // 0 = vista del lanzador, 1 = perspectiva elevada
     }
     setContext(goalDist, showWall) { this.goalDist = goalDist; this.showWall = showWall; this.findCut(); this.draw(); }
+    setHero(on) { on = !!on; if (on === this.hero) return; this.hero = on; if (on) { this.stop(); this.t = null; this.blend = 1; } this.draw(); }
     // Dónde termina el dibujo: en la red si el balón entra en la portería, en la barrera si da en ella.
     findCut() {
       this.cut = null; this.camS = null;
@@ -1279,35 +1542,39 @@
     setView(v) { this.view = v; this.draw(); }
     caption() { const D = this.goalDist; return this.showWall && D >= WALL_X + 2 ? `Falta a ${es(D, 0)} m, con barrera` : `Portería a ${es(D, 0)} m`; }
     // fl: resultado de SB.kickFlight; meta: { recordedS, hitS (segundo impacto sin afinar), fitted }
-    setFlight(fl, meta) { this.stop(); this.fl = fl; this.meta = meta || {}; this.t = null; this.findCut(); this.draw(); }
+    setFlight(fl, meta) { this.stop(); this.fl = fl; this.meta = meta || {}; this.t = null; this.blend = 1; this.findCut(); this.draw(); }
     endTime() { const m = this.fl.main; return Math.min(this.cut ? this.cut.t : m.T[m.T.length - 1], 6); }
     cutX() { return this.cut ? this.cut.x : Infinity; }
     stop() { if (this.raf) { cancelAnimationFrame(this.raf); this.raf = 0; } }
+    // Animación del vuelo; en perspectiva arranca desde la vista del lanzador y la cámara se aleja mientras vuela.
     play() {
       this.stop();
       if (!this.fl) return;
-      if (reducedMotion() || typeof requestAnimationFrame !== 'function') { this.t = null; this.draw(); return; }
-      const end = this.endTime(), rate = Math.max(this.rate, end / 3.2);   // a cámara lenta, pero sin eternizarse
-      let last = null; this.t = 0;
+      if (reducedMotion() || typeof requestAnimationFrame !== 'function') { this.t = null; this.blend = 1; this.draw(); return; }
+      // entre 1,8 y 3,2 s de animación: los chutes cortos se ven a cámara lenta
+      const end = this.endTime(), rate = end / Math.max(1.8, Math.min(3.2, end / this.rate)), pov = this.view === 'behind' && !this.hero;
+      this.playRate = rate;
+      let last = null; this.t = 0; this.blend = pov ? 0 : 1;
       const step = (ts) => {
         if (last == null) last = ts;
         this.t += (ts - last) / 1000 * rate; last = ts;
-        if (this.t >= end) { this.t = null; this.raf = 0; this.draw(); if (this.onEnd) this.onEnd(); return; }
+        if (pov) this.blend = smooth(0.1 * end, 0.72 * end, this.t);
+        if (this.t >= end) { this.t = null; this.blend = 1; this.raf = 0; this.draw(); if (this.onEnd) this.onEnd(); return; }
         this.draw();
         this.raf = requestAnimationFrame(step);
       };
       this.raf = requestAnimationFrame(step);
     }
     // Instante fijado desde fuera (vídeo): t < 0 deja el balón en el punto de golpeo.
-    setTime(t) { this.stop(); this.t = t; this.draw(); }
+    setTime(t) { this.stop(); this.t = t; this.blend = 1; this.draw(); }
     draw() {
       const f = fit(this.cv); if (!f) return;
-      if (this.view === 'side') this.drawSide(f.ctx, f.w, f.h);
-      else if (this.view === 'top') this.drawTop(f.ctx, f.w, f.h);
-      else this.drawBehind(f.ctx, f.w, f.h);
+      if (this.hero || this.view === 'behind') this.drawBehind(f.ctx, f.w, f.h);
+      else if (this.view === 'side') this.drawSide(f.ctx, f.w, f.h);
+      else this.drawTop(f.ctx, f.w, f.h);
     }
     ballNow() {
-      if (!this.fl) return { x: 0, y: 0, z: RB, t: 0 };
+      if (this.hero || !this.fl) return { x: 0, y: 0, z: RB, t: 0 };
       if (this.t == null) {
         if (this.cut) return { ...this.cut, rest: true };
         const m = this.fl.main, n = m.T.length - 1; return { x: m.X[n], y: m.Y[n], z: m.Z[n], t: m.T[n], rest: true };
@@ -1318,26 +1585,44 @@
     // Tramo medido (línea continua) y proyectado (discontinua): índices de corte de la trayectoria principal.
     cutIndex(tr, tCut) { let i = 0; while (i < tr.T.length - 1 && tr.T[i] < tCut) i++; return i; }
 
-    // ---------- vista desde detrás (perspectiva)
-    camera(w, h) {
-      const key = w + 'x' + h + '/' + this.goalDist;
-      if (this.camS == null || this.camKey !== key) { this.camKey = key; this.camS = this.fitCamera(w, h); }
-      return this.makeCamera(w, h, this.camS);
+    // ---------- cámaras: la del lanzador (detrás del balón, a la altura de las rodillas) y la elevada
+    camSpec(kind, w, h) {
+      const D = this.goalDist;
+      if (kind === 'pov') {
+        // el balón, justo por encima del cartel de estado (heroBottom: lo que tapa ese cartel por abajo)
+        const avail = h - (this.hero ? (this.heroBottom || 0.3 * h) : 0);
+        const f = Math.max(0.6 * h, Math.min(1.05 * h, 2.3 * w, 1.3 * avail));
+        const yBall = Math.min(0.615 * h, avail - 0.081 * f - 8);
+        return { pos: [-1.3, 0, 0.5], look: [D, 0, 0.5], f, cy: Math.max(0.12 * h, yBall - 0.3 * f) };
+      }
+      const key = w + 'x' + h + '/' + D;
+      if (this.camS == null || this.camKey !== key) { this.camKey = key; this.camS = 1; this.camS = this.fitCamera(w, h); }
+      return this.fitSpec(w, h, this.camS);
     }
-    makeCamera(w, h, s) {   // s = 1: encuadre normal; mayor: más lejos y más alta
+    fitSpec(w, h, s) {   // s = 1: encuadre normal; mayor: más lejos y más alta
       const D = this.goalDist, l0 = [D * 0.5, 0.6, 0.3];
       const look = [l0[0], l0[1], l0[2] + (s - 1) * 2.4];
       const pos = V.add(look, V.mul(V.sub([-7.8, -4.6, 5.4], l0), s));
-      const fwd = V.unit(V.sub(look, pos)), right = V.unit(V.cross(fwd, [0, 0, 1])), up = V.cross(right, fwd);
-      const fov = 42 * Math.PI / 180;
-      return { pos, fwd, right, up, f: (h / 2) / Math.tan(fov / 2), cx: w / 2, cy: h / 2 };
+      return { pos, look, f: (h / 2) / Math.tan(21 * Math.PI / 180), cy: h / 2 };
     }
+    build(sp, w) {
+      const fwd = V.unit(V.sub(sp.look, sp.pos)), right = V.unit(V.cross(fwd, [0, 0, 1])), up = V.cross(right, fwd);
+      return { pos: sp.pos, fwd, right, up, f: sp.f, cx: w / 2, cy: sp.cy };
+    }
+    camera(w, h) {
+      if (this.hero) return this.build(this.camSpec('pov', w, h), w);
+      const fs = this.camSpec('fit', w, h);
+      if (this.blend >= 1) return this.build(fs, w);
+      const pv = this.camSpec('pov', w, h), b = this.blend;
+      return this.build({ pos: lerp3(pv.pos, fs.pos, b), look: lerp3(pv.look, fs.look, b), f: lerp(pv.f, fs.f, b), cy: lerp(pv.cy, fs.cy, b) }, w);
+    }
+    // la cámara elevada se aleja lo justo para que quepa toda la trayectoria
     fitCamera(w, h) {
       const fl = this.fl; if (!fl) return 1;
       const m = fl.main, end = this.endTime(), pts = [];
       for (let i = 0; i < m.T.length; i += 4) { if (m.T[i] > end) break; pts.push([m.X[i], m.Y[i], m.Z[i]]); }
       for (let s = 1; s < 2.75; s += 0.125) {
-        const cam = this.makeCamera(w, h, s);
+        const cam = this.build(this.fitSpec(w, h, s), w);
         if (pts.every((p) => { const P = this.proj(cam, p); return !P || (P[1] > 26 && P[0] > 10 && P[0] < w - 10); })) return s;
       }
       return 2.75;
@@ -1374,6 +1659,15 @@
       for (let i = 0; i + 1 < pts.length; i++) this.seg(ctx, cam, pts[i], pts[i + 1]);
       if (close && pts.length > 2) this.seg(ctx, cam, pts[pts.length - 1], pts[0]);
     }
+    groundLine(ctx, cam, a, b, wd, alpha) {   // línea pintada en el césped, con su anchura real
+      const dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1, ox = -dy / n * wd / 2, oy = dx / n * wd / 2;
+      if (alpha != null) {   // muy cerca de la cámara se desvanece
+        const depth = V.dot(V.sub([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0], cam.pos), cam.fwd);
+        const k = alpha * smooth(1.4, 5, depth); if (k < 0.02) return;
+        ctx.fillStyle = `rgba(244,247,241,${k.toFixed(3)})`;
+      }
+      this.fillPoly(ctx, cam, [[a[0] + ox, a[1] + oy, 0], [b[0] + ox, b[1] + oy, 0], [b[0] - ox, b[1] - oy, 0], [a[0] - ox, a[1] - oy, 0]]);
+    }
     pitchLines(D) { // marcas reglamentarias del fondo, sobre z = 0; cada elemento es una polilínea
       const L = [];
       L.push([[D, -45, 0], [D, 45, 0]]);
@@ -1381,116 +1675,151 @@
       const a0 = Math.acos(5.5 / 9.15), arc = [];
       for (let i = 0; i <= 24; i++) { const a = -a0 + 2 * a0 * i / 24; arc.push([D - 11 - 9.15 * Math.cos(a), 9.15 * Math.sin(a), 0]); }
       L.push(arc);
-      const spot = [];
-      for (let i = 0; i <= 12; i++) { const a = 2 * Math.PI * i / 12; spot.push([D - 11 + 0.16 * Math.cos(a), 0.16 * Math.sin(a), 0]); }
-      L.push(spot);
       return L;
     }
+    ballView(cam) {   // orientación del balón: reposo y, en vuelo, girando sobre su eje real (a ritmo visible)
+      const L = this.fl && this.fl.main && this.fl.main.launch;
+      let ax = null, ang = 0;
+      if (!this.hero && L && !L.lowSpin && this.t != null && this.t > 0) {
+        const w = [L.rifle || 0, L.top || 0, L.side || 0], n = Math.hypot(w[0], w[1], w[2]);
+        if (n > 60) { ax = w.map((x) => x / n); ang = 2 * Math.PI * Math.min(1.6, n / 400) * this.t / (this.playRate || this.rate); }
+      }
+      return (v) => {
+        let q = V.rot(v, REST_AXIS, REST_ANG);
+        if (ax) q = V.rot(q, ax, ang);
+        return [V.dot(q, cam.right), V.dot(q, cam.up), -V.dot(q, cam.fwd)];
+      };
+    }
+
+    // ---------- vista desde detrás: la del lanzador al preparar el chute, la perspectiva elevada con el resultado
     drawBehind(ctx, w, h) {
-      const D = this.goalDist, cam = this.camera(w, h), fl = this.fl;
+      const D = this.goalDist, cam = this.camera(w, h), fl = this.fl, hero = this.hero;
+      const hz = this.proj(cam, [4000, 0, 0]);
+      const hy = hz ? Math.max(0, Math.min(h, hz[1])) : h * 0.3;
       // cielo y césped
-      const hz = this.proj(cam, [5000, 0, 0]);
-      const hy = hz ? hz[1] : h * 0.3;
-      ctx.fillStyle = C.sky; ctx.fillRect(0, 0, w, hy + 1);
+      const sky = ctx.createLinearGradient(0, 0, 0, Math.max(1, hy));
+      sky.addColorStop(0, '#031A10'); sky.addColorStop(1, '#0F422E');
+      ctx.fillStyle = sky; ctx.fillRect(0, 0, w, hy + 1);
       ctx.fillStyle = C.g2; ctx.fillRect(0, hy, w, h - hy);
       const W = 5.5;
       ctx.fillStyle = C.g1;
-      for (let k = -4; k < 12; k += 2) {       // franjas de siega, alineadas con la línea de gol
+      for (let k = -4; k < 14; k += 2) {       // franjas de siega, alineadas con la línea de gol
         const x1 = D - k * W, x0 = x1 - W;
         this.fillPoly(ctx, cam, [[x0, -70, 0], [x1, -70, 0], [x1, 70, 0], [x0, 70, 0]]);
       }
-      ctx.fillStyle = C.sky; ctx.fillRect(0, 0, w, hy);   // por encima del horizonte no hay césped
-      // líneas
-      ctx.strokeStyle = 'rgba(244,247,241,0.88)'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); for (const pl of this.pitchLines(D)) this.poly(ctx, cam, pl, false); ctx.stroke();
-      // portería
+      const haze = ctx.createLinearGradient(0, hy, 0, h);   // aire: más claro a lo lejos
+      haze.addColorStop(0, 'rgba(206,236,216,0.20)'); haze.addColorStop(0.3, 'rgba(206,236,216,0.04)'); haze.addColorStop(1, 'rgba(0,22,12,0.12)');
+      ctx.fillStyle = haze; ctx.fillRect(0, hy, w, h - hy);
+      // grada al fondo
+      { const x0 = D + 13, x1 = D + 27, Y = 70;
+        ctx.fillStyle = '#0B2C1F'; this.fillPoly(ctx, cam, [[x0, -Y, 0], [x0, Y, 0], [x0, Y, 1.1], [x0, -Y, 1.1]]);
+        ctx.fillStyle = '#072318'; this.fillPoly(ctx, cam, [[x0, -Y, 1.1], [x0, Y, 1.1], [x1, Y, 10], [x1, -Y, 10]]);
+        ctx.strokeStyle = 'rgba(244,247,241,0.07)'; ctx.lineWidth = 1; ctx.beginPath();
+        for (let i = 1; i < 14; i++) { const t = i / 14; this.seg(ctx, cam, [x0 + (x1 - x0) * t, -Y, 1.1 + 8.9 * t], [x0 + (x1 - x0) * t, Y, 1.1 + 8.9 * t]); }
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(244,247,241,0.25)'; ctx.beginPath(); this.seg(ctx, cam, [x0, -Y, 1.1], [x0, Y, 1.1]); ctx.stroke(); }
+      // líneas del campo, con su anchura real (12 cm)
+      for (const pl of this.pitchLines(D)) for (let i = 0; i + 1 < pl.length; i++) this.groundLine(ctx, cam, pl[i], pl[i + 1], 0.12, 0.9);
+      ctx.fillStyle = 'rgba(244,247,241,0.9)';
+      { const ring = []; for (let i = 0; i < 16; i++) { const a = 2 * Math.PI * i / 16; ring.push([D - 11 + 0.16 * Math.cos(a), 0.16 * Math.sin(a), 0]); } this.fillPoly(ctx, cam, ring); }
+      // portería: sombra, red y marco
       const hw = GOAL_W / 2;
+      ctx.fillStyle = 'rgba(0,18,10,0.22)'; this.fillPoly(ctx, cam, [[D, -hw, 0], [D, hw, 0], [D + 2, hw, 0], [D + 2, -hw, 0]]);
+      ctx.fillStyle = 'rgba(244,247,241,0.06)'; this.fillPoly(ctx, cam, [[D + 0.9, -hw, GOAL_H], [D + 0.9, hw, GOAL_H], [D + 2, hw, 0], [D + 2, -hw, 0]]);
       ctx.strokeStyle = 'rgba(244,247,241,0.3)'; ctx.lineWidth = 1; ctx.beginPath();
-      for (let i = 0; i <= 6; i++) { const y = -hw + GOAL_W * i / 6; this.seg(ctx, cam, [D + 0.9, y, GOAL_H], [D + 2, y, 0]); this.seg(ctx, cam, [D, y, GOAL_H], [D + 0.9, y, GOAL_H]); }
-      for (const z of [0, 0.8, 1.6]) this.seg(ctx, cam, [D + 2 - z * 0.45, -hw, z], [D + 2 - z * 0.45, hw, z]);
+      for (let i = 0; i <= 10; i++) { const y = -hw + GOAL_W * i / 10; this.seg(ctx, cam, [D + 0.9, y, GOAL_H], [D + 2, y, 0]); this.seg(ctx, cam, [D, y, GOAL_H], [D + 0.9, y, GOAL_H]); }
+      for (const z of [0, 0.6, 1.2, 1.8]) this.seg(ctx, cam, [D + 2 - z * 0.45, -hw, z], [D + 2 - z * 0.45, hw, z]);
       for (const y of [-hw, hw]) { this.seg(ctx, cam, [D, y, GOAL_H], [D + 0.9, y, GOAL_H]); this.seg(ctx, cam, [D + 0.9, y, GOAL_H], [D + 2, y, 0]); this.seg(ctx, cam, [D, y, 0], [D + 2, y, 0]); }
       ctx.stroke();
+      const gz = this.proj(cam, [D, 0, 1.2]), postW = gz ? Math.max(2.2, Math.min(7, cam.f * 0.12 / gz[2])) : 2.4;
       const drawFrame = () => {
-        ctx.strokeStyle = C.chalk; ctx.lineWidth = 2.4; ctx.setLineDash([]); ctx.beginPath();
+        ctx.setLineDash([]); ctx.lineCap = 'butt';
+        ctx.strokeStyle = '#C9D3CD'; ctx.lineWidth = postW; ctx.beginPath();
         this.poly(ctx, cam, [[D, -hw, 0], [D, -hw, GOAL_H], [D, hw, GOAL_H], [D, hw, 0]], false); ctx.stroke();
+        ctx.strokeStyle = C.chalk; ctx.lineWidth = postW * 0.6; ctx.beginPath();
+        this.poly(ctx, cam, [[D, -hw + 0.02, 0], [D, -hw + 0.02, GOAL_H + 0.02], [D, hw + 0.02, GOAL_H + 0.02], [D, hw + 0.02, 0]], false); ctx.stroke();
+        ctx.lineCap = 'round';
       };
 
-      const main = fl ? fl.main : null;
+      const main = fl && !hero ? fl.main : null;
       const tNow = this.t, anim = tNow != null;
       const cutX = this.cutX();
-      const drawPath = (from, to) => { // tramo de la trayectoria con x en [from, to)
-        if (!main) return;
-        const tCut = this.meta.recordedS == null ? Infinity : this.meta.recordedS;
-        const tEnd = anim ? Math.max(0, tNow) : Infinity;
-        // sombra en el suelo
-        ctx.strokeStyle = C.shadow; ctx.lineWidth = 2; ctx.setLineDash([]); ctx.beginPath();
-        let started = false;
-        for (let i = 0; i < main.T.length; i++) {
-          if (main.T[i] > tEnd || main.X[i] > cutX) break;
-          const x = main.X[i]; if (x < from || x >= to) { started = false; continue; }
-          const P = this.proj(cam, [x, main.Y[i], 0]); if (!P) { started = false; continue; }
-          if (!started) { ctx.moveTo(P[0], P[1]); started = true; } else ctx.lineTo(P[0], P[1]);
-        }
-        ctx.stroke();
-        for (const part of ['medido', 'proyectado']) {
-          ctx.strokeStyle = C.trace; ctx.lineWidth = part === 'medido' ? 3 : 2.2;
-          ctx.setLineDash(part === 'medido' ? [] : [5, 5]); ctx.beginPath(); started = false;
-          for (let i = 0; i < main.T.length; i++) {
-            const t = main.T[i]; if (t > tEnd || main.X[i] > cutX) break;
-            const inPart = part === 'medido' ? t <= tCut + 1e-9 : t >= tCut - 0.004;
-            const x = main.X[i];
-            if (!inPart || x < from || x >= to) { started = false; continue; }
-            const P = this.proj(cam, [x, main.Y[i], main.Z[i]]); if (!P) { started = false; continue; }
-            if (!started) { ctx.moveTo(P[0], P[1]); started = true; } else ctx.lineTo(P[0], P[1]);
+      const tEnd = anim ? Math.max(0, tNow) : Infinity;
+      const tCut = this.meta.recordedS == null ? Infinity : this.meta.recordedS;
+      // trazo con anchura en perspectiva (una cinta de unos centímetros); discontinuo según la distancia recorrida
+      const track = (tr, from, to, o) => {
+        let dist = 0, prev = null, open = false, curW = -1;
+        const flush = () => { if (open) { ctx.stroke(); open = false; } };
+        ctx.strokeStyle = o.color; ctx.setLineDash([]);
+        for (let i = 0; i < tr.T.length; i += 2) {
+          const t = tr.T[i], x = tr.X[i];
+          if (t > o.tEnd || x > o.xMax) break;
+          const p = [x, tr.Y[i], o.ground ? 0.004 : tr.Z[i]];
+          if (prev) {
+            dist += Math.hypot(p[0] - prev[0], p[1] - prev[1], p[2] - prev[2]);
+            const xm = (p[0] + prev[0]) / 2;
+            const inPart = !o.part || (o.part === 'medido' ? t <= tCut + 1e-9 : t >= tCut - 0.004);
+            const onDash = !o.dash || Math.floor(dist / o.dash) % 2 === 0;
+            const A = inPart && onDash && xm >= from && xm < to ? this.proj(cam, prev) : null, B = A ? this.proj(cam, p) : null;
+            if (A && B) {
+              // tramos seguidos con el mismo grosor (a medio píxel) van en un solo trazo
+              const lw = Math.round(2 * Math.max(o.minW, Math.min(o.maxW, cam.f * o.width / ((A[2] + B[2]) / 2)))) / 2;
+              if (!open || lw !== curW) { flush(); ctx.lineWidth = curW = lw; ctx.beginPath(); ctx.moveTo(A[0], A[1]); open = true; }
+              ctx.lineTo(B[0], B[1]);
+            } else flush();
           }
-          ctx.stroke();
+          prev = p;
         }
-        ctx.setLineDash([]);
+        flush();
       };
-      const drawGhost = () => {  // el mismo chute sin efecto
-        if (!fl || anim) return;
-        const g = fl.noSpin;
-        ctx.strokeStyle = C.chalkDim; ctx.lineWidth = 1.5; ctx.setLineDash([3, 5]); ctx.beginPath();
-        let started = false;
-        for (let i = 0; i < g.T.length; i += 2) {
-          const P = this.proj(cam, [g.X[i], g.Y[i], g.Z[i]]); if (!P) { started = false; continue; }
-          if (!started) { ctx.moveTo(P[0], P[1]); started = true; } else ctx.lineTo(P[0], P[1]);
-        }
-        ctx.stroke(); ctx.setLineDash([]);
+      const drawPath = (from, to) => {
+        if (!main) return;
+        track(main, from, to, { color: C.trace, width: 0.06, minW: 2.6, maxW: 9, part: 'medido', tEnd, xMax: cutX });
+        track(main, from, to, { color: C.trace, width: 0.045, minW: 2, maxW: 7, part: 'proyectado', dash: 0.55, tEnd, xMax: cutX });
       };
       const drawBall = (b) => {
         const P = this.proj(cam, [b.x, b.y, b.z]), S = this.proj(cam, [b.x, b.y, 0]);
         if (!P) return;
-        const r = Math.max(2.6, cam.f * RB * 2.1 / P[2]);
-        if (S) { ctx.fillStyle = C.shadow; ctx.beginPath(); ctx.ellipse(S[0], S[1], r * 1.05, r * 0.38, 0, 0, Math.PI * 2); ctx.fill(); }
-        ctx.fillStyle = C.ball; ctx.beginPath(); ctx.arc(P[0], P[1], r, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = C.ink; ctx.lineWidth = 1; ctx.stroke();
+        const k = 1 + 1.1 * smooth(3, 14, P[2]);            // de lejos, algo más grande para que se vea
+        const r = Math.max(2.6, cam.f * RB * k / P[2]);
+        if (S) groundShadow(ctx, S[0], S[1], r * 1.25, r * 0.42, b.z < 0.5 ? 0.55 : 0.32);
+        if (r >= 5) drawBall3D(ctx, P[0], P[1], r, this.ballView(cam), this.lightFor(cam));
+        else { ctx.fillStyle = C.ball; ctx.beginPath(); ctx.arc(P[0], P[1], r, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = C.ink; ctx.lineWidth = 1; ctx.stroke(); }
       };
       const drawWall = () => {
         if (!this.showWall || D < WALL_X + 2) return;
-        ctx.strokeStyle = 'rgba(244,247,241,0.75)'; ctx.lineWidth = 1.2; ctx.beginPath();
-        this.seg(ctx, cam, [WALL_X, -1.7, 0], [WALL_X, 1.7, 0]); ctx.stroke();
-        for (const y of [-0.93, -0.31, 0.31, 0.93]) {
+        ctx.fillStyle = 'rgba(244,247,241,0.75)'; this.groundLine(ctx, cam, [WALL_X, -1.7, 0], [WALL_X, 1.7, 0], 0.06);
+        for (const y of WALL_YS) {
+          const B = this.proj(cam, [WALL_X, y, 0]); if (!B) continue;
+          const s = cam.f / B[2]; groundShadow(ctx, B[0], B[1], 0.36 * s, 0.13 * s + 1, 0.5);
+        }
+        for (const y of WALL_YS) {
           const B = this.proj(cam, [WALL_X, y, 0]), T = this.proj(cam, [WALL_X, y, 1.58]), H = this.proj(cam, [WALL_X, y, 1.69]);
           if (!B || !T || !H) continue;
           const s = cam.f / B[2], bw = 0.46 * s;
-          ctx.fillStyle = C.wall; ctx.beginPath();
-          const x0 = B[0] - bw / 2, y0 = T[1], hh = B[1] - T[1], rr = Math.min(bw * 0.3, 6);
+          const x0 = B[0] - bw / 2, y0 = T[1], hh = B[1] - T[1], rr = Math.min(bw * 0.3, 8);
+          const gr = ctx.createLinearGradient(x0, 0, x0 + bw, 0);
+          gr.addColorStop(0, '#6A9AF4'); gr.addColorStop(0.42, C.wall); gr.addColorStop(1, '#1D469E');
+          ctx.fillStyle = gr; ctx.beginPath();
           ctx.moveTo(x0, y0 + hh); ctx.lineTo(x0, y0 + rr); ctx.quadraticCurveTo(x0, y0, x0 + rr, y0);
           ctx.lineTo(x0 + bw - rr, y0); ctx.quadraticCurveTo(x0 + bw, y0, x0 + bw, y0 + rr); ctx.lineTo(x0 + bw, y0 + hh); ctx.closePath(); ctx.fill();
-          ctx.fillStyle = C.wallHead; ctx.beginPath(); ctx.arc(H[0], H[1], 0.115 * s, 0, Math.PI * 2); ctx.fill();
+          const hr = 0.115 * s, hg = ctx.createRadialGradient(H[0] - hr * 0.35, H[1] - hr * 0.35, hr * 0.1, H[0], H[1], hr);
+          hg.addColorStop(0, '#D7E4FC'); hg.addColorStop(1, '#6F94D8');
+          ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(H[0], H[1], hr, 0, Math.PI * 2); ctx.fill();
         }
       };
-      this.text(ctx, this.caption(), 10, 17, 'left', C.chalkDim, 11);
       const b = this.ballNow();
       const land = main && main.land && !anim && main.land.x <= cutX ? main.land : null;
-      const drawLand = () => { // marca del bote
+      const drawLand = () => {
         const ring = [];
         for (let i = 0; i <= 20; i++) { const a = 2 * Math.PI * i / 20; ring.push([land.x + 0.45 * Math.cos(a), land.y + 0.45 * Math.sin(a), 0]); }
         ctx.strokeStyle = C.trace; ctx.lineWidth = 1.6; ctx.beginPath(); this.poly(ctx, cam, ring, false); ctx.stroke();
       };
-      drawGhost();
-      // de lejos a cerca: lo que queda detrás de la portería, el marco, hasta la barrera, la barrera y lo de delante
+      // el mismo chute sin efecto
+      if (fl && !hero && !anim) track(fl.noSpin, -Infinity, Infinity, { color: 'rgba(244,247,241,0.55)', width: 0.02, minW: 1.3, maxW: 3, dash: 0.35, tEnd: Infinity, xMax: Infinity });
+      // sombra de la trayectoria en el suelo
+      if (main) track(main, -Infinity, Infinity, { color: 'rgba(3,20,13,0.42)', width: 0.05, minW: 1.6, maxW: 7, ground: true, tEnd, xMax: cutX });
+      // de lejos a cerca: detrás de la portería, el marco, hasta la barrera, la barrera y lo de delante
       drawPath(D, Infinity);
       if (land && land.x >= D) drawLand();
       if (b.x >= D) drawBall(b);
@@ -1498,12 +1827,20 @@
       drawPath(WALL_X, D);
       if (land && land.x < D) drawLand();
       if (b.x >= WALL_X && b.x < D) drawBall(b);
-      // punto de golpeo
-      { const ring = []; for (let i = 0; i <= 16; i++) { const a = 2 * Math.PI * i / 16; ring.push([0.3 * Math.cos(a), 0.3 * Math.sin(a), 0]); }
-        ctx.strokeStyle = 'rgba(244,247,241,0.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); this.poly(ctx, cam, ring, false); ctx.stroke(); }
+      if (!hero && this.blend >= 1) { const ring = []; for (let i = 0; i <= 18; i++) { const a = 2 * Math.PI * i / 18; ring.push([0.3 * Math.cos(a), 0.3 * Math.sin(a), 0]); }
+        ctx.strokeStyle = 'rgba(244,247,241,0.75)'; ctx.lineWidth = 1.2; ctx.beginPath(); this.poly(ctx, cam, ring, false); ctx.stroke(); }
       drawWall();
       drawPath(-Infinity, WALL_X);
       if (b.x < WALL_X) drawBall(b);
+      // viñeta
+      const vg = ctx.createRadialGradient(w / 2, h * 0.55, Math.min(w, h) * 0.38, w / 2, h * 0.55, Math.max(w, h) * 0.85);
+      vg.addColorStop(0, 'rgba(2,14,9,0)'); vg.addColorStop(1, 'rgba(2,14,9,0.4)');
+      ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
+      if (!hero && !this.captionOff) this.text(ctx, this.caption(), 10, 17, 'left', C.chalkDim, 11);
+    }
+    lightFor(cam) {   // luz del mundo (arriba, detrás y a la izquierda del lanzador) en coordenadas de la cámara
+      const Lw = V.unit([-0.55, 0.45, 0.7]);
+      return V.unit([V.dot(Lw, cam.right), V.dot(Lw, cam.up), -V.dot(Lw, cam.fwd)]);
     }
 
     // ---------- utilidades de las vistas planas
@@ -1550,7 +1887,7 @@
         label(x, String(x));
       }
       if (vex > 1) this.text(ctx, 'altura ampliada ×' + es(vex, vex % 1 ? 1 : 0), w - 8, 14, 'right', C.chalkDim, 11);
-      this.text(ctx, this.caption(), 8, 14, 'left', C.chalkDim, 11);
+      if (!this.captionOff) this.text(ctx, this.caption(), 8, 14, 'left', C.chalkDim, 11);
       if (!fl) { this.ballSide(ctx, X(0), Z(RB)); return; }
       const anim = this.t != null;
       if (!anim) {
@@ -1609,7 +1946,7 @@
       ctx.strokeStyle = 'rgba(244,247,241,0.35)'; ctx.lineWidth = 1; ctx.strokeRect(X(D), Y(hw), 2 * sc, GOAL_W * sc);
       ctx.fillStyle = C.chalk; for (const y of [-hw, hw]) { ctx.beginPath(); ctx.arc(X(D), Y(y), 3, 0, Math.PI * 2); ctx.fill(); }
       if (this.showWall && D >= WALL_X + 2) { ctx.strokeStyle = C.wall; ctx.lineWidth = 6; ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(X(WALL_X), Y(-1.16)); ctx.lineTo(X(WALL_X), Y(1.16)); ctx.stroke(); ctx.lineCap = 'round'; }
-      { const cap = this.caption(); ctx.font = '11px ' + FONT; const tw = ctx.measureText(cap).width;
+      if (!this.captionOff) { const cap = this.caption(); ctx.font = '11px ' + FONT; const tw = ctx.measureText(cap).width;
         ctx.fillStyle = 'rgba(6,40,27,0.78)'; ctx.fillRect(0, 0, tw + 16, 22); this.text(ctx, cap, 8, 15, 'left', 'rgba(244,247,241,0.72)', 11); }
       // línea de salida (sin efecto no se desvía)
       ctx.strokeStyle = C.chalkDim; ctx.lineWidth = 1.5; ctx.setLineDash([3, 5]); ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(xmax), Y(0)); ctx.stroke(); ctx.setLineDash([]);
@@ -1641,15 +1978,6 @@
   }
 
   // ------------------------------------------------------------------ balón girando (visto desde detrás)
-  const PATCHES = (() => {
-    const ph = (1 + Math.sqrt(5)) / 2, cs = [];
-    for (const a of [-1, 1]) for (const b of [-1, 1]) { cs.push([0, a, b * ph]); cs.push([a, b * ph, 0]); cs.push([a * ph, 0, b]); }
-    return cs.map((c0) => {
-      const c = V.unit(c0), u = V.perp(c), v = V.cross(c, u), rho = 0.37, pts = [];
-      for (let j = 0; j < 5; j++) { const a = 2 * Math.PI * j / 5; pts.push(V.add(V.mul(c, Math.cos(rho)), V.mul(V.add(V.mul(u, Math.cos(a)), V.mul(v, Math.sin(a))), Math.sin(rho)))); }
-      return { c, pts };
-    });
-  })();
   class SpinBall {
     constructor(canvas) { this.cv = canvas; this.axis = null; this.rps = 0; this.angle = 0; this.raf = 0; this.last = null; }
     // axis: vector unitario en el mundo (regla de la mano derecha) o null; rpm real; slow: cuántas veces más lento
@@ -1658,7 +1986,7 @@
       this.stop(); this.draw();
       if (axis && this.rps > 0.004 && !reducedMotion() && typeof requestAnimationFrame === 'function') {
         const step = (ts) => {
-          if (!this.cv.isConnected) { this.raf = 0; return; }
+          if (!this.cv.isConnected || this.cv.offsetParent === null) { this.raf = 0; return; }   // oculto: se para
           if (this.last != null) this.angle += 2 * Math.PI * this.rps * Math.min(0.1, (ts - this.last) / 1000);
           this.last = ts; this.draw(); this.raf = requestAnimationFrame(step);
         };
@@ -1668,53 +1996,43 @@
     stop() { if (this.raf) { cancelAnimationFrame(this.raf); this.raf = 0; } }
     draw() {
       const f = fit(this.cv); if (!f) return;
-      const { ctx, w, h } = f, cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.34;
+      const { ctx, w, h } = f, cx = w / 2, cy = h * 0.46, R = Math.min(w, h) * 0.32;
       const a = this.axis;
-      // eje (por detrás del balón): en pantalla x = −y del mundo, arriba = z
-      if (a) {
-        const ax = -a[1], ay = -a[2], len = Math.hypot(ax, ay);
-        ctx.strokeStyle = C.chalk; ctx.lineWidth = 2;
-        if (len > 0.3) {
-          const ux = ax / len, uy = ay / len, L = R * 1.36;
-          ctx.beginPath(); ctx.moveTo(cx - ux * L, cy - uy * L); ctx.lineTo(cx + ux * L, cy + uy * L); ctx.stroke();
-        }
+      groundShadow(ctx, cx, cy + R * 1.18, R * 0.95, R * 0.17, 0.5);
+      // en pantalla: x = −y del mundo, arriba = z, hacia quien mira = −x
+      const toView = (v) => { const q = a ? V.rot(v, a, this.angle) : v; return [-q[1], q[2], -q[0]]; };
+      const ex = a ? -a[1] : 0, ey = a ? a[2] : 0, ez = a ? -a[0] : 0, side = Math.hypot(ex, ey) > 0.25, L = R * 1.4;
+      if (a && side) { ctx.strokeStyle = 'rgba(244,247,241,0.85)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - ex * L, cy + ey * L); ctx.lineTo(cx + ex * L, cy - ey * L); ctx.stroke(); }
+      drawBall3D(ctx, cx, cy, R, toView);
+      if (a && side) {   // la parte del eje que sale hacia quien mira, por delante del balón
+        const s = ez >= 0 ? 1 : -1;
+        ctx.strokeStyle = C.chalk; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(cx + s * ex * R * 0.98, cy - s * ey * R * 0.98); ctx.lineTo(cx + s * ex * L, cy - s * ey * L); ctx.stroke();
+        ctx.fillStyle = C.chalk; ctx.beginPath(); ctx.arc(cx + s * ex * L, cy - s * ey * L, 3.2, 0, Math.PI * 2); ctx.fill();
       }
-      ctx.save();
-      ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fillStyle = C.ball; ctx.fill(); ctx.clip();
-      ctx.fillStyle = C.ink;
-      for (const p of PATCHES) {
-        const c = a ? V.rot(p.c, a, this.angle) : p.c;
-        if (c[0] > 0.3) continue;                       // cara oculta (x > 0 queda lejos del observador)
-        ctx.beginPath();
-        p.pts.forEach((q0, i) => { const q = a ? V.rot(q0, a, this.angle) : q0; const sx = cx - q[1] * R, sy = cy - q[2] * R; if (i) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy); });
-        ctx.closePath(); ctx.fill();
-      }
-      ctx.restore();
-      ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
-      if (a && Math.hypot(a[1], a[2]) <= 0.3) { // eje hacia el observador
-        ctx.strokeStyle = C.trace; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.stroke();
-      }
+      if (a && !side) { ctx.strokeStyle = C.trace; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.stroke(); }
     }
   }
 
   // ------------------------------------------------------------------ punto de golpeo (visto desde detrás)
+  const STRIKE_AXIS = V.unit([0.2, 0.7, 0.5]), STRIKE_ANG = 0.5;
   function drawStrike(canvas, sp) {
     const f = fit(canvas); if (!f) return;
-    const { ctx, w, h } = f, cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.34;
-    ctx.fillStyle = 'rgba(244,247,241,0.08)'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = C.chalk; ctx.lineWidth = 2; ctx.stroke();
-    ctx.strokeStyle = 'rgba(244,247,241,0.35)'; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
+    const { ctx, w, h } = f, cx = w / 2, cy = h * 0.46, R = Math.min(w, h) * 0.32;
+    groundShadow(ctx, cx, cy + R * 1.18, R * 0.95, R * 0.17, 0.5);
+    drawBall3D(ctx, cx, cy, R, (v) => { const q = V.rot(v, STRIKE_AXIS, STRIKE_ANG); return [-q[1], q[2], -q[0]]; });
+    ctx.strokeStyle = 'rgba(10,30,22,0.55)'; ctx.lineWidth = 1.2; ctx.setLineDash([3, 4]);
     ctx.beginPath(); ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy); ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R); ctx.stroke(); ctx.setLineDash([]);
     if (!sp) return;
     let dx = sp.right / RB, dy = sp.up / RB; const n = Math.hypot(dx, dy);
     if (n > 0.86) { dx *= 0.86 / n; dy *= 0.86 / n; }
     const px = cx + dx * R, py = cy - dy * R;
+    ctx.strokeStyle = 'rgba(10,30,22,0.55)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(px, py, 14, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = C.trace; ctx.lineWidth = 2.2; ctx.stroke();
     ctx.fillStyle = C.trace; ctx.beginPath(); ctx.arc(px, py, 7.5, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.strokeStyle = C.traceDim; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px, py, 13, 0, Math.PI * 2); ctx.stroke();
   }
 
-  root.SBScene = { PitchScene, SpinBall, drawStrike, colors: C, es };
+  root.SBScene = { PitchScene, SpinBall, drawStrike, drawBall3D, fit, colors: C, es };
 })(typeof self !== 'undefined' ? self : this);
 
 </script>
@@ -1882,7 +2200,7 @@
   'use strict';
   const $ = (s) => document.querySelector(s);
   const U = SB.UUID16, es = SBScene.es;
-  const VERSION = '2.0';
+  const VERSION = '3.0';
   const ANALYSIS = 2;   // sube cuando cambia el análisis: los chutes guardados se recalculan
   const STORE_KEY = 'smartball.v1.kicks';
   const SETTINGS_KEY = 'smartball.v1.settings';
@@ -1904,7 +2222,11 @@
   window.addEventListener('unhandledrejection', (e) => log('ERROR promesa: ' + ((e.reason && e.reason.message) || e.reason)));
 
   // ------------------------------------------------------------ ajustes y almacenamiento
-  const settings = { sound: true, speak: true, vibrate: true, cam: false, cam60: false, camAudio: true, openField: false, goalDist: 20, wall: true, view: 'behind' };
+  const settings = {
+    sound: true, speak: true, vibrate: true, cam: false, cam60: false, camAudio: true, openField: false, goalDist: 20, wall: true, view: 'behind',
+    foot: null, rtab: 'vuelo', evoMetric: 'speed', evoFoot: 'all',
+    rt: { type: 'range', min: 60, max: 70, players: 1, n: 5, names: ['', ''] },
+  };
   try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch (e) { /* sin almacenamiento */ }
   const saveSettings = () => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) { /* nada */ } };
   function loadKicks() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { return []; } }
@@ -2200,6 +2522,7 @@
   // ------------------------------------------------------------ flujo del chute
   async function arm() {
     if (!S.t || !S.t.connected) return;
+    if (screen !== 'kick') showScreen('kick');
     audio();
     clearDownloadTimers();
     S.pendingDownload = false; S.maybeKick = false;
@@ -2366,19 +2689,22 @@
     const kick = {
       id: Date.now(), at: new Date().toISOString(), dtMs: S.samplePeriodMs, n: samples.length,
       gaps: S.decoder.gaps, partial: !!timedOut && samples.length < 1000, tag: '', demo: !!S.t.isDemo,
-      truth: S.t.isDemo ? S.t.lastTruth : undefined, openField: !!settings.openField, raw: SB.samplesToB64(samples),
+      truth: S.t.isDemo ? S.t.lastTruth : undefined, openField: !!settings.openField, foot: settings.foot || null, raw: SB.samplesToB64(samples),
     };
     const res = analyzeKick(kick);
     kick.res = slim(res);
     kicks.unshift(kick);
     if (kicks.length > 150) kicks.length = 150;
+    const said = chAssign(kick, res);
     storeKicks(kicks);
     const clip = S.clipPromise; S.clipPromise = null;
     S.framing = false;
+    if (screen !== 'kick') showScreen('kick');
     setState('idle');
     renderResult(kick, res, true);
     renderHistory();
-    announce(res);
+    if (screen === 'hist') renderEvo();
+    announce(res, said);
     if (clip) attachClip(kick, clip);
   }
 
@@ -2426,11 +2752,12 @@
     if (n) { storeKicks(kicks); log('Chutes recalculados con el análisis actual: ' + n); renderHistory(); }
   }
 
-  function announce(r) {
-    if (!r.ok) { beep(300, 0.3); say('No he podido analizar el chute'); return; }
+  function announce(r, extra) {
+    if (!r.ok) { beep(300, 0.3); say('No he podido analizar el chute' + (extra ? '. ' + extra : '')); return; }
     beep(1568, 0.1); setTimeout(() => beep(2093, 0.14), 120);
     const parts = [Math.round(r.speedKmh) + ' kilómetros por hora', Math.round(r.rpm) + ' revoluciones'];
     if (r.type) parts.push(r.type.toLowerCase());
+    if (extra) parts.push(extra);
     say(parts.join('. '));
   }
 
@@ -2520,12 +2847,13 @@
     $('#banner').className = 'banner' + (d.cls ? ' ' + d.cls : '');
     $('#progress').hidden = st !== 'downloading';
     if (st === 'downloading') setProgress(0);
-    renderDock(); renderConn(); refreshStage();
+    renderDock(); renderConn(); refreshStage(); renderFootSel();
   }
   function setProgress(f) {
     const p = Math.round(Math.max(0, Math.min(1, f)) * 100);
     $('#progressBar').style.width = p + '%';
-    $('#statusSub').textContent = p + ' %. Mantén el balón cerca del móvil.';
+    $('#statusText').textContent = 'Descargando ' + p + ' %';
+    $('#statusSub').textContent = 'Mantén el balón cerca del móvil.';
   }
   function renderDock() {
     const d = DOCK[S.state] || DOCK.idle, main = $('#btnMain'), alt = $('#btnAlt'), cam = $('#btnCam');
@@ -2535,37 +2863,80 @@
     alt.hidden = !d[2]; alt.textContent = d[2] || ''; alt.dataset.act = d[3] || '';
     cam.hidden = !SBVideo.supported();
     cam.setAttribute('aria-pressed', String(!!settings.cam));
+    $('#dock').hidden = screen !== 'kick';
   }
   function renderConn() {
-    const el = $('#conn');
-    $('#btnDisc').hidden = !(S.t && S.t.connected && S.state === 'idle');
-    if (!S.t || !S.t.connected) { el.textContent = S.state === 'needReconnect' ? 'Balón fuera de alcance' : 'Sin balón'; return; }
-    const i = S.info, parts = [S.t.isDemo ? 'Demostración' : (i.name || 'Smart Ball')];
+    const el = $('#conn'), on = !!(S.t && S.t.connected), i = S.info || {};
+    $('#btnDisc').hidden = !(on && S.state === 'idle');
+    $('#pill').className = 'pill' + (on ? ' on' : S.state === 'needReconnect' ? ' lost' : '');
+    const batt = on && i.battery != null;
+    $('#batt').hidden = !batt;
+    if (batt) { $('#battPct').textContent = i.battery + ' %'; $('#battLvl').setAttribute('width', String(Math.max(1, 12.9 * Math.min(100, i.battery) / 100))); }
+    if (!on) {
+      el.textContent = S.state === 'needReconnect' ? 'Fuera de alcance' : 'Sin balón';
+      $('#ballInfo').textContent = S.state === 'needReconnect' ? 'Fuera de alcance: acércalo al móvil.' : 'Sin conectar.';
+      return;
+    }
+    el.textContent = i.status && i.status.onCharger ? (i.status.charging ? 'Cargando' : 'En la base') : (S.t.isDemo ? 'Demostración' : 'Conectado');
+    const parts = [S.t.isDemo ? 'Balón simulado' : (i.name || 'Smart Ball')];
     if (i.battery != null) parts.push('batería ' + i.battery + ' %');
+    if (i.firmware) parts.push('firmware ' + i.firmware);
     if (i.status && i.status.onCharger) parts.push(i.status.charging ? 'cargando' : 'en la base');
-    el.textContent = parts.join(', ');
+    $('#ballInfo').textContent = parts.join(', ') + '.';
   }
   function stageMode() {
     const live = ['arming', 'waitingReady', 'ready', 'kicked'].includes(S.state) || (S.framing && ['idle', 'disconnected', 'connecting'].includes(S.state));
     return settings.cam && S.cam.open && live ? 'camera' : 'scene';
   }
+  // Mientras se prepara y se descarga el chute, la escena ocupa toda la pantalla; después, el resultado.
+  const CYCLE = ['arming', 'waitingReady', 'ready', 'kicked', 'downloading', 'needReconnect', 'needRetry'];
+  function heroMode() { return !(S.current != null && S.currentRes && !CYCLE.includes(S.state)); }
   function refreshStage() {
-    const mode = stageMode();
+    const mode = stageMode(), hero = heroMode();
+    $('#scr-kick').classList.toggle('hero', hero);
     $('#preview').hidden = mode !== 'camera';
-    const showing = S.current != null && S.currentRes && mode === 'scene';
-    const quietState = S.state === 'idle' || S.state === 'disconnected';
-    $('#banner').hidden = quietState && showing;
-    $('#views').hidden = !(quietState && showing && S.fl);
+    $('#result').hidden = hero;
+    $('#banner').hidden = !hero;
+    $('#views').hidden = hero || !S.fl;
+    if (hero) $('#minibar').classList.remove('on');
+    $('#footSel').hidden = !(hero && S.t && S.t.connected && ['idle', 'arming', 'waitingReady', 'ready'].includes(S.state));
     document.querySelectorAll('#views [data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === scene.view)));
-    if (mode === 'scene') scene.draw();
+    if (hero && screen === 'kick') { const bh = $('#banner').offsetHeight; if (bh) S.bannerMax = Math.max(S.bannerMax || 0, bh); scene.heroBottom = S.bannerMax || 0; }
+    scene.setHero(hero);
+    if (mode === 'scene' && screen === 'kick') scene.draw();
+    renderChalStrip();
+  }
+  function renderFootSel() {
+    document.querySelectorAll('#footSel [data-foot]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.foot === settings.foot)));
+  }
+
+  // ------------------------------------------------------------ pantallas
+  let screen = 'kick';
+  function showScreen(name) {
+    if (!document.querySelector(`.screen[data-scr="${name}"]`)) name = 'kick';
+    const changed = screen !== name;
+    screen = name;
+    document.querySelectorAll('.screen').forEach((s) => { s.hidden = s.dataset.scr !== name; });
+    document.querySelectorAll('#tabs [data-scr]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.scr === name)));
+    const sc = $('#screens'); if (changed && sc) sc.scrollTop = 0;
+    renderDock(); placeToast();
+    if (name === 'kick') { refreshStage(); redrawPanels(); }
+    else if (name === 'hist') { renderHistory(); renderEvo(); }
+    else if (name === 'retos') renderChallenge();
+    else if (name === 'more') renderUsage();
   }
 
   let toastTimer = null;
   function toast(msg) {
-    const el = $('#toast'), dock = document.querySelector('.dock'); el.textContent = msg; el.hidden = false;
-    if (dock && dock.offsetHeight) el.style.bottom = (dock.offsetHeight + 8) + 'px';
+    const el = $('#toast'); el.textContent = msg; el.hidden = false;
+    placeToast();
     clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 7000);
     log('Aviso: ' + msg);
+  }
+  function placeToast() {
+    const el = $('#toast'); if (!el || el.hidden) return;
+    const anchor = [$('#dock'), $('#tabs')].find((x) => x && !x.hidden && x.offsetHeight);
+    if (anchor && anchor.getBoundingClientRect) { const top = anchor.getBoundingClientRect().top; if (top > 0) el.style.bottom = Math.max(8, window.innerHeight - top + 8) + 'px'; }
   }
   function showError(e) {
     const m = (e && e.message) || String(e);
@@ -2655,7 +3026,7 @@
     const when = new Date(kick.at);
     $('#resWhen').textContent = when.toLocaleString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) + (kick.demo ? ', simulación' : '');
     $('#tag').value = kick.tag || '';
-    $('#resBody').hidden = !res.ok; $('#resBad').hidden = res.ok; $('#detailBlock').hidden = !res.ok;
+    $('#resBody').hidden = !res.ok; $('#resBad').hidden = res.ok;
     const notes = [];
     if (!res.ok) {
       $('#resType').textContent = 'Chute sin analizar';
@@ -2666,6 +3037,10 @@
       $('#nSpeed').textContent = Math.round(res.speedKmh);
       $('#nSpin').textContent = Math.round(res.rpm);
       $('#cSpin').textContent = `${es(res.rps, 1)} vueltas por segundo`;
+      $('#mbType').textContent = res.type || ''; $('#mbSpeed').textContent = Math.round(res.speedKmh); $('#mbSpin').textContent = Math.round(res.rpm);
+      const pk = prevKick(kick);
+      $('#dSpeed').textContent = pk ? deltaText(res.speedKmh - pk.res.speedKmh, 'km/h') : '';
+      $('#dSpin').textContent = pk ? deltaText(res.rpm - pk.res.rpm, 'rpm') : '';
       const fl = SB.kickFlight(res);
       S.fl = fl;
       $('#resReading').textContent = reading(res, fl);
@@ -2697,6 +3072,7 @@
       }
       // giro y golpeo
       const axis = spinAxis(res);
+      S.spinArgs = [axis, res.rpm];
       spinBall.set(axis, res.rpm, 20);
       $('#spinCap').innerHTML = axis ? `<b>${es(res.axisAboveHorizontalDeg, 0)}° de inclinación</b>Visto desde detrás, 20 veces más lento.` + (res.topConfidence === 'baja' ? ' La orientación del eje respecto al tiro es dudosa.' : '') : '<b>Sin giro apreciable</b>No hay eje que dibujar.';
       const sp = strikeOf(res);
@@ -2704,7 +3080,7 @@
       $('#strikeCap').innerHTML = `<b>Punto de golpeo</b>${escapeHtml(strikeText(res, sp))}`;
       const rows = [];
       if (res.topRpm != null && !res.lowSpin) rows.push([res.topRpm >= 0 ? 'Liftado' : 'Cortado', `${signed(res.topRpm)} rpm ${confTag(res.topConfidence)}`]);
-      if (res.sideRpm != null && !res.lowSpin) rows.push(['Rosca', `${signed(res.sideRpm)} rpm <small>${Math.abs(res.sideRpm) < 30 ? 'recto' : 'hacia la ' + (res.sideRpm > 0 ? 'izquierda' : 'derecha')}</small>`]);
+      if (res.sideRpm != null && !res.lowSpin) { const fh = footHint(res, kick.foot); rows.push(['Rosca', `${signed(res.sideRpm)} rpm <small>${Math.abs(res.sideRpm) < 30 ? 'recto' : 'hacia la ' + (res.sideRpm > 0 ? 'izquierda' : 'derecha')}${fh ? ', ' + fh : ''}</small>`]); }
       if (res.rifleRpm != null && !res.lowSpin) rows.push(['En bala', `${signed(res.rifleRpm)} rpm <small>no desvía</small>`]);
       rows.push(['Giro total', `${Math.round(res.rpm)} rpm ${confTag(res.spinConfidence)}`]);
       $('#split').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
@@ -2719,9 +3095,70 @@
     $('#resNotes').innerHTML = notes.join('');
     document.querySelectorAll('#distSeg [data-d]').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.d === settings.goalDist)));
     $('#set_wall').checked = !!settings.wall;
+    renderResMeta(kick, res);
+    $('#rtVideo').hidden = !kick.video;
     refreshStage();
+    showRtab(settings.rtab);
     if (animate && S.fl) scene.play();
     loadClip(kick);
+  }
+  // pie, favorito y reto del chute que se está viendo
+  const FOOT = { left: 'izquierdo', right: 'derecho' };
+  function renderResMeta(kick, res) {
+    $('#resFoot').innerHTML = kick.foot ? `Pie <b>${FOOT[kick.foot]}</b>` : 'Pie sin indicar';
+    $('#resFav').setAttribute('aria-pressed', String(!!kick.fav));
+    $('#resFav').textContent = kick.fav ? '★ Favorito' : '☆ Favorito';
+    const vc = $('#resChal'), ch = kick.chal;
+    if (!ch) { vc.hidden = true; return; }
+    const who = ch.name ? ch.name + ', ' : '';
+    let txt, cls = '';
+    if (ch.type === 'range') {
+      cls = ch.hit ? 'hit' : 'miss';
+      txt = ch.v == null ? `Reto: ${who}chute ${ch.k} de ${ch.n}. Sin velocidad: cuenta como fuera.`
+        : `${ch.hit ? 'Dentro' : 'Fuera'} del rango: ${Math.round(ch.v)} km/h, entre ${ch.min} y ${ch.max}. ${who ? who.charAt(0).toUpperCase() + who.slice(1) : 'Chute '}${who ? 'chute ' : ''}${ch.k} de ${ch.n}.`;
+    } else txt = `Reto «${RT[ch.type].label.toLowerCase()}»: ${who}chute ${ch.k} de ${ch.n}.`;
+    const c = CH.active;
+    if (c && c.id === ch.id) {
+      const last = c.turns[c.turns.length - 1];
+      if (c.done) { const w = chWinner(c); txt += c.players > 1 ? (w < 0 ? ' Reto terminado: empate.' : ` Reto terminado: gana ${chName(c, w)}.`) : ' Reto terminado.'; }
+      else if (last && last.kickId === kick.id) txt += c.players > 1 ? ` Ahora le toca a ${chName(c, chTurnInfo(c).player)}.` : '';
+    }
+    vc.textContent = txt; vc.className = 'verdict' + (cls ? ' ' + cls : ''); vc.hidden = false;
+  }
+  function prevKick(kick) {
+    const i = kicks.indexOf(kick); if (i < 0) return null;
+    for (let j = i + 1; j < kicks.length; j++) { const k = kicks[j]; if (!!k.demo === !!kick.demo && k.res && k.res.ok) return k; }
+    return null;
+  }
+  function deltaText(d, unit) {
+    if (d == null || !isFinite(d)) return '';
+    const r = Math.round(d);
+    return r === 0 ? 'Igual que el anterior' : `${Math.abs(r)} ${unit} ${r > 0 ? 'más' : 'menos'} que el anterior`;
+  }
+  // Con el pie conocido, la rosca dice con qué parte se golpeó: con la derecha, el interior curva a la izquierda.
+  function footHint(res, foot) {
+    if (!foot || res.lowSpin || res.sideRpm == null || Math.abs(res.sideRpm) < 120) return '';
+    const inside = (foot === 'right') === (res.sideRpm > 0);
+    return inside ? 'típico del interior' : 'típico del exterior';
+  }
+  // pestañas del detalle
+  function showRtab(name) {
+    const ok = !!(S.currentRes && S.currentRes.ok), vid = !$('#rtVideo').hidden;
+    if (name === 'video' && !vid) name = 'vuelo';
+    if (!ok && vid) name = 'video';
+    if (name !== settings.rtab && ok) { settings.rtab = name; saveSettings(); }
+    document.querySelectorAll('#rtabs [data-rp]').forEach((b) => { b.setAttribute('aria-selected', String(b.dataset.rp === name)); if (b.dataset.rp !== 'video') b.hidden = !ok; });
+    $('#rtabs').hidden = !ok && !vid;
+    document.querySelectorAll('#result .rp').forEach((p) => { p.hidden = p.dataset.rp !== name || (!ok && name !== 'video'); });
+    redrawPanels();
+  }
+  function redrawPanels() {
+    const res = S.currentRes; if (!res || !res.ok || screen !== 'kick' || heroMode()) return;
+    if (settings.rtab === 'giro') {
+      if (S.spinArgs) spinBall.set(S.spinArgs[0], S.spinArgs[1], 20);
+      SBScene.drawStrike($('#strikeCanvas'), strikeOf(res));
+    }
+    if (settings.rtab === 'video' && P.kick) drawClipOverlay();
   }
   function rerenderCurrent(animate) {
     const k = kicks.find((x) => x.id === S.current); if (!k) return;
@@ -2757,6 +3194,7 @@
     $('#vPlay').textContent = 'Ver';
     measureLabel();
     $('#clipBlock').hidden = false;
+    if ($('#rtVideo').hidden) { $('#rtVideo').hidden = false; showRtab(settings.rtab); }
     updateClipUi();
   }
   function onClipMeta() {
@@ -2899,7 +3337,7 @@
   async function deleteClip() {
     const k = P.kick; if (!k) return;
     await SBVideo.ClipStore.del(k.id); delete k.video; delete k.elevVideo; delete k.vtaps;
-    storeKicks(kicks); unloadClip(); $('#clipBlock').hidden = true; renderHistory(); renderUsage(); rerenderCurrent(false);
+    storeKicks(kicks); unloadClip(); $('#clipBlock').hidden = true; $('#rtVideo').hidden = true; renderHistory(); renderUsage(); rerenderCurrent(false);
   }
   async function renderUsage() {
     const el = $('#clipUsage'); if (!el) return;
@@ -2917,7 +3355,7 @@
       const r = k.res || {};
       const d = new Date(k.at).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
       const main = r.ok ? `<b>${es(r.speedKmh, 0)} km/h</b>, ${es(r.rpm, 0)} rpm, ${escapeHtml((r.type || '').toLowerCase())}` : 'sin analizar';
-      const meta = [d]; if (k.demo) meta.push('simulación'); if (k.video) meta.push('con vídeo'); if (k.tag) meta.push(escapeHtml(k.tag));
+      const meta = [d]; if (k.foot) meta.push('pie ' + FOOT[k.foot]); if (k.demo) meta.push('simulación'); if (k.video) meta.push('con vídeo'); if (k.tag) meta.push(escapeHtml(k.tag));
       return `<li data-id="${k.id}" class="${S.current === k.id ? 'sel' : ''}"><div><div class="h2">${main}</div><div class="h1">${meta.join(', ')}</div></div><button class="ico${k.fav ? ' on' : ''}" data-fav="${k.id}" aria-label="${k.fav ? 'Quitar de favoritos' : 'Marcar como favorito'}" aria-pressed="${!!k.fav}">★</button><button class="ico" data-del="${k.id}" aria-label="Borrar este chute">✕</button></li>`;
     }).join('');
   }
@@ -2932,10 +3370,10 @@
 
   // ------------------------------------------------------------ exportar / importar
   function csvOf(list) {
-    const head = ['fecha', 'etiqueta', 'velocidad_kmh', 'rpm', 'vueltas_s', 'eje_sobre_horizontal_grados', 'liftado_rpm', 'rosca_rpm', 'bala_rpm', 'salida_grados', 'salida_fuente', 'alcance_m', 'altura_max_m', 'segundo_impacto_ms', 'tipo', 'fiabilidad_giro', 'fiabilidad_liftado', 'video', 'simulado'];
+    const head = ['fecha', 'pie', 'etiqueta', 'velocidad_kmh', 'rpm', 'vueltas_s', 'eje_sobre_horizontal_grados', 'liftado_rpm', 'rosca_rpm', 'bala_rpm', 'salida_grados', 'salida_fuente', 'alcance_m', 'altura_max_m', 'segundo_impacto_ms', 'tipo', 'fiabilidad_giro', 'fiabilidad_liftado', 'video', 'simulado'];
     const num = (x, d) => (x == null || !isFinite(x) ? '' : x.toFixed(d || 0).replace('.', ','));
     const q = (s) => '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"';
-    const rows = list.map((k) => { const r = k.res || {}; return [q(new Date(k.at).toLocaleString('es-ES')), q(k.tag), num(r.speedKmh), num(r.rpm), num(r.rps, 1), num(r.axisAboveHorizontalDeg), num(r.topRpm), num(r.sideRpm), num(r.rifleRpm), num(r.elevDeg, 1), q(r.elevSource || 'balón'), num(r.reachM, 1), num(r.apexM, 1), num(r.secondImpactMs), q(r.ok ? r.type : r.reason), q(r.spinConfidence), q(r.topConfidence), k.video ? 'sí' : 'no', k.demo ? 'sí' : 'no'].join(';'); });
+    const rows = list.map((k) => { const r = k.res || {}; return [q(new Date(k.at).toLocaleString('es-ES')), q(k.foot ? FOOT[k.foot] : ''), q(k.tag), num(r.speedKmh), num(r.rpm), num(r.rps, 1), num(r.axisAboveHorizontalDeg), num(r.topRpm), num(r.sideRpm), num(r.rifleRpm), num(r.elevDeg, 1), q(r.elevSource || 'balón'), num(r.reachM, 1), num(r.apexM, 1), num(r.secondImpactMs), q(r.ok ? r.type : r.reason), q(r.spinConfidence), q(r.topConfidence), k.video ? 'sí' : 'no', k.demo ? 'sí' : 'no'].join(';'); });
     return '﻿' + head.join(';') + '\n' + rows.join('\n');
   }
   function jsonOf(list) {
@@ -2972,12 +3410,296 @@
     } catch (e) { showError(e); }
   }
 
+  // ------------------------------------------------------------ evolución por semanas
+  const EVO = {
+    speed: { label: 'velocidad', unit: 'km/h', of: (r) => r.speedKmh },
+    spin: { label: 'giro', unit: 'rpm', of: (r) => r.rpm },
+    top: { label: 'liftado', unit: 'rpm', of: (r) => (r.topConfidence && r.topConfidence !== 'baja' && r.topRpm > 0 ? r.topRpm : null) },   // solo liftados
+  };
+  const EV = { data: null, sel: null, geom: null };
+  function weekStart(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+  const fmtDay = (d) => d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '');
+  function evoData() {
+    const real = kicks.filter((k) => !k.demo && k.res && k.res.ok);
+    const base = real.length ? real : kicks.filter((k) => k.res && k.res.ok);
+    const M = EVO[settings.evoMetric] || EVO.speed, f = settings.evoFoot;
+    const pts = base.filter((k) => f === 'all' || k.foot === f).map((k) => ({ t: new Date(k.at), v: M.of(k.res) })).filter((p) => p.v != null && isFinite(p.v));
+    const out = { pts, weeks: [], demo: !real.length && base.length > 0, M };
+    if (!pts.length) return out;
+    const now = weekStart(new Date()), first = weekStart(new Date(Math.min(...pts.map((p) => p.t.getTime()))));
+    const nW = Math.max(1, Math.min(12, Math.round((now - first) / (7 * 864e5)) + 1));
+    for (let i = nW - 1; i >= 0; i--) { const d = new Date(now); d.setDate(d.getDate() - 7 * i); out.weeks.push({ start: d, vals: [] }); }
+    for (const p of pts) { const ws = weekStart(p.t).getTime(); const wk = out.weeks.find((x) => x.start.getTime() === ws); if (wk) wk.vals.push(p); }
+    for (const wk of out.weeks) { const v = wk.vals.map((p) => p.v); wk.n = v.length; wk.mean = v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; wk.best = v.length ? Math.max(...v) : null; }
+    return out;
+  }
+  function niceTicks(lo, hi, n) {
+    if (!(hi > lo)) { const d = Math.max(1, Math.abs(lo) * 0.1); lo -= d; hi += d; }
+    const raw = (hi - lo) / Math.max(1, n), mag = Math.pow(10, Math.floor(Math.log10(raw))), fr = raw / mag;
+    const step = (fr <= 1 ? 1 : fr <= 2 ? 2 : fr <= 5 ? 5 : 10) * mag, out = [];
+    for (let v = Math.floor(lo / step) * step; v <= Math.ceil(hi / step) * step + step * 1e-9; v += step) out.push(Math.round(v * 1e6) / 1e6);
+    return out;
+  }
+  function renderEvo() {
+    document.querySelectorAll('#evoMetric [data-m]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.m === settings.evoMetric)));
+    document.querySelectorAll('#evoFoot [data-f]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.f === settings.evoFoot)));
+    const D = evoData(); EV.data = D; EV.sel = null;
+    const withData = D.weeks.filter((w) => w.n);
+    $('#evoLegend').hidden = !withData.length;
+    $('#evoNote').textContent = !withData.length ? (kicks.length ? 'No hay chutes con este filtro.' : 'Cuando haya chutes, aquí verás cómo evolucionan semana a semana.') : evoSummary(D);
+    drawEvo();
+    renderEvoTable(D);
+  }
+  function evoSummary(D) {
+    const ws = D.weeks.filter((w) => w.n), last = ws[ws.length - 1], prev = ws[ws.length - 2], u = D.M.unit, n0 = (x) => es(x, 0);
+    const isNow = last === D.weeks[D.weeks.length - 1];
+    let s = `${isNow ? 'Esta semana' : 'Semana del ' + fmtDay(last.start)}: media ${n0(last.mean)} ${u} y mejor ${n0(last.best)} ${u}, en ${last.n} ${last.n === 1 ? 'chute' : 'chutes'}.`;
+    if (prev) { const d = Math.round(last.mean - prev.mean); s += ` Semana del ${fmtDay(prev.start)}: media ${n0(prev.mean)} ${u} (${d === 0 ? 'igual' : (d > 0 ? d + ' más ahora' : -d + ' menos ahora')}).`; }
+    if (settings.evoMetric === 'top') s += ' Solo cuentan los chutes liftados.';
+    if (D.demo) s += ' Son chutes de simulación: cuando haya reales, se usan solo esos.';
+    return s;
+  }
+  function drawEvo() {
+    const cv = $('#evoChart'), f = SBScene.fit(cv); if (!f) return;
+    const { ctx, w, h } = f, D = EV.data;
+    const padL = 42, padR = 12, padT = 12, padB = 28;
+    if (!D || !D.weeks.some((x) => x.n)) {
+      ctx.strokeStyle = 'rgba(244,247,241,0.14)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(padL, h - padB + 0.5); ctx.lineTo(w - padR, h - padB + 0.5); ctx.stroke();
+      EV.geom = null; return;
+    }
+    const weeks = D.weeks, vals = D.pts.filter((p) => p.t >= weeks[0].start).map((p) => p.v);
+    const ticks = niceTicks(Math.min(...vals), Math.max(...vals), 4), lo = ticks[0], hi = ticks[ticks.length - 1];
+    const bw = (w - padL - padR) / weeks.length;
+    const X = (i) => padL + (i + 0.5) * bw, Y = (v) => padT + (hi - v) / ((hi - lo) || 1) * (h - padT - padB);
+    ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(244,247,241,0.14)'; ctx.fillStyle = 'rgba(244,247,241,0.74)'; ctx.textAlign = 'right';
+    for (const t of ticks) { const y = Math.round(Y(t)) + 0.5; ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke(); ctx.fillText(String(t), padL - 7, y + 4); }
+    ctx.textAlign = 'center';
+    const every = Math.max(1, Math.ceil(52 / bw));
+    weeks.forEach((wk, i) => { if ((weeks.length - 1 - i) % every === 0) ctx.fillText(fmtDay(wk.start), X(i), h - 9); });
+    if (EV.sel != null && weeks[EV.sel]) { const x = Math.round(X(EV.sel)) + 0.5; ctx.strokeStyle = 'rgba(244,247,241,0.45)'; ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, h - padB); ctx.stroke(); }
+    // cada chute, repartido dentro de su semana según el día
+    ctx.fillStyle = 'rgba(244,247,241,0.5)';
+    weeks.forEach((wk, i) => { for (const p of wk.vals) { const x = padL + i * bw + bw * (0.18 + 0.64 * ((p.t.getDay() + 6) % 7) / 6); ctx.beginPath(); ctx.arc(x, Y(p.v), 2.6, 0, Math.PI * 2); ctx.fill(); } });
+    // media de la semana: línea de 2 px
+    ctx.strokeStyle = '#F4F7F1'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    const mid = weeks.map((wk, i) => (wk.mean == null ? null : [X(i), Y(wk.mean)])).filter(Boolean);
+    if (mid.length > 1) { ctx.beginPath(); mid.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]))); ctx.stroke(); }
+    for (const q of mid) { ctx.beginPath(); ctx.moveTo(q[0] - 7, q[1]); ctx.lineTo(q[0] + 7, q[1]); ctx.stroke(); }
+    // la mejor de la semana: punto amarillo con anillo del color del fondo
+    weeks.forEach((wk, i) => { if (wk.best == null) return; ctx.beginPath(); ctx.arc(X(i), Y(wk.best), 5, 0, Math.PI * 2); ctx.fillStyle = '#FFD60A'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#0B5539'; ctx.stroke(); });
+    EV.geom = { padL, bw, n: weeks.length };
+  }
+  function evoPick(i) {
+    const D = EV.data; if (!D || !EV.geom) return;
+    EV.sel = Math.max(0, Math.min(D.weeks.length - 1, i));
+    const wk = D.weeks[EV.sel], u = D.M.unit;
+    $('#evoNote').textContent = wk.n ? `Semana del ${fmtDay(wk.start)}: media ${es(wk.mean, 0)} ${u}, mejor ${es(wk.best, 0)} ${u}, ${wk.n} ${wk.n === 1 ? 'chute' : 'chutes'}.` : `Semana del ${fmtDay(wk.start)}: sin chutes.`;
+    drawEvo();
+  }
+  function renderEvoTable(D) {
+    const t = $('#evoTable'); if (!t) return;
+    const rows = D.weeks.filter((w) => w.n).reverse();
+    t.innerHTML = rows.length ? `<thead><tr><th>Semana del</th><th>Chutes</th><th>Media</th><th>Mejor</th></tr></thead><tbody>${rows.map((w) => `<tr><td>${fmtDay(w.start)}</td><td>${w.n}</td><td>${es(w.mean, 0)}</td><td>${es(w.best, 0)}</td></tr>`).join('')}</tbody>` : '';
+    $('#evoTableBox').hidden = !rows.length;
+    $('#evoTableUnit').textContent = D.M.unit;
+  }
+
+  // ------------------------------------------------------------ retos
+  const CH_KEY = 'smartball.v1.retos';
+  const CH = { active: null, past: [] };
+  try { Object.assign(CH, JSON.parse(localStorage.getItem(CH_KEY) || '{}')); } catch (e) { /* sin almacenamiento */ }
+  const saveCH = () => { try { localStorage.setItem(CH_KEY, JSON.stringify(CH)); } catch (e) { /* nada */ } };
+  const RT = {
+    range: { label: 'Velocidad en un rango', unit: 'km/h', of: (r) => r.speedKmh },
+    speed: { label: 'El más rápido', unit: 'km/h', of: (r) => r.speedKmh },
+    spin: { label: 'El de más giro', unit: 'rpm', of: (r) => r.rpm },
+    top: { label: 'El más liftado', unit: 'rpm', of: (r) => (r.lowSpin ? 0 : r.topRpm) },
+  };
+  const chTitle = (c) => (c.type === 'range' ? `Entre ${c.min} y ${c.max} km/h` : RT[c.type].label);
+  const chName = (c, p) => ((c.names && c.names[p]) || '').trim() || 'Jugador ' + (p + 1);
+  function chTurnInfo(c) { const i = c.turns.length; return { idx: i, player: i % c.players, k: Math.floor(i / c.players) + 1, done: i >= c.n * c.players }; }
+  function chScore(c, p) {
+    const mine = c.turns.filter((t) => t.player === p);
+    if (c.type === 'range') return mine.filter((t) => t.hit).length;
+    const v = mine.map((t) => t.v).filter((x) => x != null && isFinite(x));
+    return v.length ? Math.max(...v) : null;
+  }
+  function chCompare(c) {   // -1 empate, 0 o 1 quién va delante (o gana)
+    if (c.players < 2) return null;
+    const a = chScore(c, 0), b = chScore(c, 1);
+    const ra = a == null ? -Infinity : Math.round(a), rb = b == null ? -Infinity : Math.round(b);
+    return ra === rb ? -1 : ra > rb ? 0 : 1;
+  }
+  const chWinner = chCompare;
+  function chStart(cfg) {
+    const names = (cfg.names || ['', '']).slice(0, 2);
+    CH.active = { id: Date.now(), type: cfg.type, min: cfg.min, max: cfg.max, players: cfg.players === 2 ? 2 : 1, n: cfg.n, names, turns: [], startedAt: new Date().toISOString(), done: false };
+    saveCH(); chRefresh();
+  }
+  function chRefresh() { renderChallenge(); renderChalStrip(); $('#tabBadge').hidden = !(CH.active && !CH.active.done); }
+  function chAssign(kick, res) {
+    const c = CH.active; if (!c || c.done) return '';
+    const ti = chTurnInfo(c); if (ti.done) return '';
+    const raw = res && res.ok ? RT[c.type].of(res) : null, v = raw == null || !isFinite(raw) ? null : Math.round(raw * 10) / 10;
+    const hit = c.type === 'range' ? v != null && v >= c.min && v <= c.max : null;
+    c.turns.push({ kickId: kick.id, player: ti.player, v, hit });
+    if (kick.foot) { c.feet = c.feet || [null, null]; c.feet[ti.player] = kick.foot; }
+    kick.chal = { id: c.id, player: ti.player, name: c.players > 1 ? chName(c, ti.player) : '', k: ti.k, n: c.n, type: c.type, min: c.min, max: c.max, v, hit };
+    const parts = [];
+    if (c.type === 'range') parts.push(hit ? 'Dentro' : 'Fuera');
+    if (chTurnInfo(c).done) {
+      c.done = true; c.finishedAt = new Date().toISOString();
+      const w = chWinner(c);
+      CH.past.unshift({ id: c.id, at: c.finishedAt, title: chTitle(c), summary: chSummary(c) });
+      if (CH.past.length > 20) CH.past.length = 20;
+      parts.push('Reto terminado' + (c.players > 1 ? (w < 0 ? ', empate' : ', gana ' + chName(c, w)) : ''));
+    } else if (c.players > 1) {
+      const nx = chTurnInfo(c).player;
+      parts.push('Le toca a ' + chName(c, nx));
+      if (c.feet && c.feet[nx]) { settings.foot = c.feet[nx]; saveSettings(); }   // cada jugador con su pie
+    }
+    saveCH(); chRefresh();
+    return parts.join('. ');
+  }
+  function chScoreLine(c) {
+    const u = RT[c.type].unit, sc = (p) => { const s = chScore(c, p); return c.type === 'range' ? `${s} de ${c.n}` : (s == null ? '—' : `${Math.round(s)} ${u}`); };
+    if (c.players < 2) return c.type === 'range' ? `${sc(0)} dentro del rango.` : `Mejor chute: ${sc(0)}.`;
+    return `${chName(c, 0)} ${sc(0)}, ${chName(c, 1)} ${sc(1)}.`;
+  }
+  function chSummary(c) {
+    if (c.players < 2) return chScoreLine(c);
+    const w = chWinner(c);
+    return (w < 0 ? 'Empate. ' : `Gana ${chName(c, w)}. `) + chScoreLine(c);
+  }
+  function chUndo() {
+    const c = CH.active; if (!c || !c.turns.length) return;
+    const t = c.turns.pop();
+    const k = kicks.find((x) => x.id === t.kickId); if (k) { delete k.chal; storeKicks(kicks); }
+    if (c.done) { c.done = false; delete c.finishedAt; CH.past = CH.past.filter((x) => x.id !== c.id); }
+    saveCH(); chRefresh();
+    if (k && S.current === k.id) renderResMeta(k, S.currentRes);
+    toast('Chute anulado: ya no cuenta para el reto.');
+  }
+  let quitAt = 0;
+  function chQuit() {
+    const c = CH.active; if (!c) return;
+    if (!c.done && c.turns.length && Date.now() - quitAt > 4000) {
+      quitAt = Date.now(); $('#rbQuit').textContent = '¿Seguro? Pulsa otra vez';
+      setTimeout(() => { if (CH.active === c && !c.done) $('#rbQuit').textContent = 'Terminar el reto'; }, 4000);
+      return;
+    }
+    quitAt = 0; CH.active = null; saveCH(); chRefresh();
+  }
+  function renderChallenge() {
+    const c = CH.active;
+    $('#retoSetup').hidden = !!c; $('#retoBoard').hidden = !c;
+    if (!c) { renderRtSetup(); renderRtPast(); return; }
+    $('#rbTitle').textContent = chTitle(c);
+    $('#rbSub').textContent = c.players > 1 ? `${chName(c, 0)} contra ${chName(c, 1)}, ${c.n} chutes cada uno, por turnos.` : `${c.n} chutes.`;
+    const ti = chTurnInfo(c), lead = chCompare(c);
+    $('#rbGrid').innerHTML = Array.from({ length: c.players }, (_, p) => {
+      const mine = c.turns.filter((t) => t.player === p), sc = chScore(c, p);
+      let bestI = -1;
+      if (c.type !== 'range') { let bv = -Infinity; mine.forEach((t, i) => { if (t.v != null && t.v > bv) { bv = t.v; bestI = i; } }); }
+      const cells = Array.from({ length: c.n }, (_, i) => {
+        const t = mine[i];
+        if (!t) return `<span class="cell${!c.done && ti.player === p && ti.k === i + 1 ? ' now' : ''}" aria-label="Chute ${i + 1}, pendiente">${i + 1}</span>`;
+        const val = t.v == null ? '—' : Math.round(t.v);
+        if (c.type === 'range') return `<span class="cell ${t.hit ? 'hit' : 'miss'}" aria-label="Chute ${i + 1}: ${val} km/h, ${t.hit ? 'dentro' : 'fuera'}">${val}</span>`;
+        return `<span class="cell ${i === bestI ? 'best' : 'val'}" aria-label="Chute ${i + 1}: ${val} ${RT[c.type].unit}">${val}</span>`;
+      }).join('');
+      const scoreTxt = c.type === 'range' ? String(sc) : (sc == null ? '—' : String(Math.round(sc)));
+      const sub = c.type === 'range' ? `dentro del rango, de ${mine.length} ${mine.length === 1 ? 'chute' : 'chutes'}` : `su mejor chute, en ${RT[c.type].unit}`;
+      return `<div class="prow${c.players > 1 && lead === p ? ' lead' : ''}"><div class="name">${escapeHtml(chName(c, p))}<small>${sub}</small></div><div class="score">${scoreTxt}</div><div class="cells">${cells}</div></div>`;
+    }).join('');
+    const res = $('#rbResult');
+    if (c.done) {
+      const w = chWinner(c), head = c.players > 1 ? (w < 0 ? 'Empate' : `Gana ${escapeHtml(chName(c, w))}`) : (c.type === 'range' ? `${chScore(c, 0)} de ${c.n} dentro` : `Mejor chute: ${Math.round(chScore(c, 0) || 0)} ${RT[c.type].unit}`);
+      res.innerHTML = `<b>${head}</b>${c.players > 1 ? escapeHtml(chScoreLine(c)) : ''}`; res.hidden = false;
+      $('#rbTurn').textContent = '';
+    } else {
+      res.hidden = true;
+      $('#rbTurn').textContent = c.players > 1 ? `Le toca a ${chName(c, ti.player)}: chute ${ti.k} de ${c.n}.` : `Chute ${ti.k} de ${c.n}.`;
+    }
+    $('#rbGo').hidden = c.done; $('#rbAgain').hidden = !c.done;
+    $('#rbUndo').hidden = !c.turns.length;
+    $('#rbQuit').textContent = c.done ? 'Nuevo reto' : 'Terminar el reto';
+  }
+  function renderRtSetup() {
+    const r = settings.rt;
+    document.querySelectorAll('#rtType [data-t]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.t === r.type)));
+    document.querySelectorAll('#rtPlayers [data-p]').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.p === r.players)));
+    document.querySelectorAll('#rtN [data-n]').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.n === r.n)));
+    $('#rtRange').hidden = r.type !== 'range';
+    $('#rtMin').textContent = r.min; $('#rtMax').textContent = r.max;
+    $('#rtName2').hidden = r.players !== 2;
+    if (document.activeElement !== $('#rtName1')) $('#rtName1').value = r.names[0] || '';
+    if (document.activeElement !== $('#rtName2')) $('#rtName2').value = r.names[1] || '';
+  }
+  function renderRtPast() {
+    const ul = $('#rtPast');
+    ul.innerHTML = CH.past.length ? CH.past.slice(0, 10).map((x) => `<li>${escapeHtml(x.title)}<small>${new Date(x.at).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}. ${escapeHtml(x.summary)}</small></li>`).join('') : '<li class="empty">Todavía no has terminado ninguno.</li>';
+  }
+  function renderChalStrip() {
+    const el = $('#chalStrip'), c = CH.active;
+    const show = !!c && !c.done && !!(S.t && S.t.connected) && screen === 'kick';
+    el.hidden = !show;
+    if (scene.captionOff !== show) { scene.captionOff = show; if (screen === 'kick') scene.draw(); }
+    if (!show) return;
+    const ti = chTurnInfo(c);
+    const who = c.players > 1 ? `Turno de <b>${escapeHtml(chName(c, ti.player))}</b>, chute ${ti.k} de ${c.n}` : `Reto: chute <b>${ti.k} de ${c.n}</b>`;
+    const goal = c.type === 'range' ? `, de ${c.min} a ${c.max} km/h` : '';
+    el.innerHTML = `<span>${who}${goal}</span><button class="go" data-go="retos">Marcador</button>`;
+  }
+
   // ------------------------------------------------------------ eventos
   function bind() {
     $('#btnMain').onclick = () => act($('#btnMain').dataset.act);
     $('#btnAlt').onclick = () => act($('#btnAlt').dataset.act);
     $('#btnDisc').onclick = disconnect;
     $('#btnCam').onclick = toggleCam;
+    $('#tabs').onclick = (e) => { const b = e.target.closest('[data-scr]'); if (b) showScreen(b.dataset.scr); };
+    $('#footSel').onclick = (e) => { const b = e.target.closest('[data-foot]'); if (!b) return; settings.foot = b.dataset.foot; saveSettings(); renderFootSel(); };
+    $('#chalStrip').onclick = (e) => { if (e.target.closest('[data-go]')) showScreen('retos'); };
+    $('#resFoot').onclick = () => {
+      const k = kicks.find((x) => x.id === S.current); if (!k) return;
+      k.foot = k.foot == null ? 'left' : k.foot === 'left' ? 'right' : null;
+      storeKicks(kicks); renderResult(k, S.currentRes, false); renderHistory();
+    };
+    $('#resFav').onclick = () => { const k = kicks.find((x) => x.id === S.current); if (!k) return; k.fav = !k.fav; storeKicks(kicks); renderResMeta(k, S.currentRes); renderHistory(); };
+    $('#rtabs').onclick = (e) => { const b = e.target.closest('[data-rp]'); if (b) showRtab(b.dataset.rp); };
+    // evolución
+    $('#evoMetric').onclick = (e) => { const b = e.target.closest('[data-m]'); if (!b) return; settings.evoMetric = b.dataset.m; saveSettings(); renderEvo(); };
+    $('#evoFoot').onclick = (e) => { const b = e.target.closest('[data-f]'); if (!b) return; settings.evoFoot = b.dataset.f; saveSettings(); renderEvo(); };
+    const evoAt = (e) => { const g = EV.geom; if (!g) return; const r = $('#evoChart').getBoundingClientRect(); evoPick(Math.floor((e.clientX - r.left - g.padL) / g.bw)); };
+    $('#evoChart').addEventListener('pointerdown', evoAt);
+    $('#evoChart').addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' || e.buttons) evoAt(e); });
+    $('#evoChart').addEventListener('keydown', (e) => {
+      if (!EV.data || !EV.geom) return;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); evoPick((EV.sel == null ? EV.data.weeks.length - 1 : EV.sel) + (e.key === 'ArrowLeft' ? -1 : 1)); }
+    });
+    // retos
+    $('#rtType').onclick = (e) => { const b = e.target.closest('[data-t]'); if (!b) return; settings.rt.type = b.dataset.t; saveSettings(); renderRtSetup(); };
+    $('#rtPlayers').onclick = (e) => { const b = e.target.closest('[data-p]'); if (!b) return; settings.rt.players = +b.dataset.p; saveSettings(); renderRtSetup(); };
+    $('#rtN').onclick = (e) => { const b = e.target.closest('[data-n]'); if (!b) return; settings.rt.n = +b.dataset.n; saveSettings(); renderRtSetup(); };
+    $('#rtRange').onclick = (e) => {
+      const b = e.target.closest('[data-step]'); if (!b) return;
+      const [k, d] = b.dataset.step.split(':'), r = settings.rt;
+      if (k === 'min') r.min = Math.max(10, Math.min(r.max - 5, r.min + +d)); else r.max = Math.min(160, Math.max(r.min + 5, r.max + +d));
+      saveSettings(); renderRtSetup();
+    };
+    for (const [id, i] of [['#rtName1', 0], ['#rtName2', 1]]) $(id).oninput = () => { settings.rt.names[i] = $(id).value; saveSettings(); };
+    $('#rtStart').onclick = () => {
+      chStart(settings.rt);
+      const c = CH.active;
+      toast(c.players > 1 ? `Reto en marcha. Empieza ${chName(c, 0)}.` : 'Reto en marcha.');
+      showScreen('kick');
+    };
+    $('#rbGo').onclick = () => showScreen('kick');
+    $('#rbUndo').onclick = chUndo;
+    $('#rbQuit').onclick = chQuit;
+    $('#rbAgain').onclick = () => { const c = CH.active; if (!c) return; chStart(c); showScreen('kick'); };
     $('#views').onclick = (e) => {
       const b = e.target.closest('button'); if (!b) return;
       P.touched = false;
@@ -3033,19 +3755,19 @@
     };
     $('#history').onclick = async (e) => {
       const fav = e.target.closest('[data-fav]');
-      if (fav) { const k = kicks.find((x) => x.id === +fav.dataset.fav); if (k) { k.fav = !k.fav; storeKicks(kicks); renderHistory(); } return; }
+      if (fav) { const k = kicks.find((x) => x.id === +fav.dataset.fav); if (k) { k.fav = !k.fav; storeKicks(kicks); renderHistory(); if (k.id === S.current) renderResMeta(k, S.currentRes); } return; }
       const del = e.target.closest('[data-del]');
       if (del) {
         const id = +del.dataset.del, k = kicks.find((x) => x.id === id);
         if (k && k.video) await SBVideo.ClipStore.del(id);
         kicks = kicks.filter((x) => x.id !== id); storeKicks(kicks);
         if (S.current === id) { S.current = null; S.currentRes = null; S.fl = null; scene.setFlight(null); unloadClip(); $('#result').hidden = true; refreshStage(); }
-        renderHistory(); renderUsage(); renderDock(); return;
+        renderHistory(); renderUsage(); renderDock(); renderEvo(); return;
       }
       const li = e.target.closest('li[data-id]'); if (!li) return;
       const k = kicks.find((x) => x.id === +li.dataset.id); if (!k) return;
+      showScreen('kick');
       renderResult(k, null, true); renderHistory();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     };
     $('#tag').onchange = () => { const k = kicks.find((x) => x.id === S.current); if (k) { k.tag = $('#tag').value.trim(); storeKicks(kicks); renderHistory(); } };
     document.querySelectorAll('.chips button').forEach((ch) => { ch.onclick = () => { const t = $('#tag'); t.value = (t.value ? t.value + ', ' : '') + ch.textContent; t.onchange(); }; });
@@ -3072,7 +3794,7 @@
     $('#diag').addEventListener('toggle', () => { if ($('#diag').open) $('#log').textContent = logLines.slice(-400).join('\n'); });
     window.addEventListener('pagehide', () => { if (S.t && S.t.connected && !S.t.isDemo) { try { S.t.write('CMD', SB.CMD.RESET); } catch (e) { /* nada */ } } S.cam.close(); });
     let rz = 0;
-    window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { scene.draw(); spinBall.draw(); if (S.currentRes && S.currentRes.ok) SBScene.drawStrike($('#strikeCanvas'), strikeOf(S.currentRes)); }, 120); });
+    window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (screen === 'kick') { scene.draw(); redrawPanels(); } else if (screen === 'hist') drawEvo(); }, 120); });
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => scene.draw()).catch(() => {});
   }
 
@@ -3092,13 +3814,25 @@
     bind();
     checkSupport();
     const ver = $('#ver'); if (ver) ver.textContent = VERSION;
+    showScreen('kick');
     setState('disconnected');
     renderHistory(); renderUsage();
     if (kicks.length) renderResult(kicks[0], null, false);
-    renderHistory();
+    renderHistory(); chRefresh(); renderFootSel();
+    watchMinibar();
     log('App Smart Ball ' + VERSION + ' · ' + navigator.userAgent);
     setTimeout(refreshOldResults, 400);
-    window.SmartBallApp = { S, P, act, scene, settings, kicks: () => kicks, current: () => ({ kick: kicks.find((x) => x.id === S.current) || null, res: S.currentRes }), analyzeKick };
+    window.SmartBallApp = { S, P, act, scene, settings, showScreen, CH, kicks: () => kicks, current: () => ({ kick: kicks.find((x) => x.id === S.current) || null, res: S.currentRes }), analyzeKick };
+  }
+  // los números principales se quedan arriba al bajar por el detalle
+  function watchMinibar() {
+    const mb = $('#minibar'), target = $('#nums'), root = $('#screens');
+    if (!mb || !target || typeof IntersectionObserver !== 'function') return;
+    const io = new IntersectionObserver((ents) => {
+      const e = ents[ents.length - 1], above = e.boundingClientRect.bottom < (e.rootBounds ? e.rootBounds.top : 0) + 4;
+      mb.classList.toggle('on', !e.isIntersecting && above && screen === 'kick' && !heroMode() && !!(S.currentRes && S.currentRes.ok));
+    }, { root, threshold: 0 });
+    io.observe(target);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

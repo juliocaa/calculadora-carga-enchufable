@@ -123,9 +123,12 @@ const summary = (d) => `${txt(d, '#resType')} | ${txt(d, '#nSpeed')} km/h, ${txt
     alt('demo');
     await waitFor(() => app.S.state === 'idle', 3000, 'conectado demo');
     check(txt(d, '#btnMain') === 'Preparar chute', 'botón Preparar chute');
-    check(/Demostración, batería 86 %/.test(txt(d, '#conn')), 'cabecera: ' + txt(d, '#conn'));
+    check(txt(d, '#conn') === 'Demostración' && txt(d, '#battPct') === '86 %', 'cabecera: ' + txt(d, '#conn') + ' ' + txt(d, '#battPct'));
+    check(d.querySelector('#scr-kick').classList.contains('hero') && d.querySelector('#result').hidden, 'pantalla completa antes del primer chute');
     for (let k = 0; k < 6; k++) {
       main('arm');
+      await waitFor(() => app.S.state === 'waitingReady', 4000, 'quieto');
+      if (k < 2) { check(!d.querySelector('#footSel').hidden, 'selector de pie visible al preparar'); d.querySelector(`#footSel [data-foot="${k === 0 ? 'left' : 'right'}"]`).click(); }
       await waitFor(() => app.S.state === 'ready', 4000, 'listo');
       if (k === 0) check(txt(d, '#statusText') === '¡Chuta!' && d.querySelector('#banner').className.includes('go'), 'cartel ¡Chuta!');
       await waitFor(() => app.S.state === 'downloading', 7000, 'descargando');
@@ -138,6 +141,15 @@ const summary = (d) => `${txt(d, '#resType')} | ${txt(d, '#nSpeed')} km/h, ${txt
       if (k === 0) {
         check(d.querySelector('#banner').hidden && !d.querySelector('#views').hidden, 'con resultado: cartel oculto y vistas visibles');
         check(d.querySelectorAll('#flightFacts li').length === 3, 'tres datos de vuelo');
+        check(kick.foot === 'left' && /izquierdo/.test(txt(d, '#resFoot')), 'pie izquierdo guardado y mostrado');
+        check(txt(d, '#dSpeed') === '', 'sin comparación en el primer chute');
+        d.querySelector('#rtabs [data-rp="giro"]').click();
+        check(!d.querySelector('#result .rp[data-rp="giro"]').hidden && d.querySelector('#result .rp[data-rp="vuelo"]').hidden, 'pestaña Giro y golpeo');
+        d.querySelector('#rtabs [data-rp="vuelo"]').click();
+      }
+      if (k === 1) {
+        check(kick.foot === 'right', 'pie derecho guardado');
+        check(/que el anterior$/.test(txt(d, '#dSpeed')) && /que el anterior$/.test(txt(d, '#dSpin')), 'comparación con el anterior: ' + txt(d, '#dSpeed') + ' / ' + txt(d, '#dSpin'));
       }
       if (res.secondImpactMs != null && !kick.openField && !d.querySelector('#landAsk').hidden) {
         const before = res.elevDeg;
@@ -164,6 +176,56 @@ const summary = (d) => `${txt(d, '#resType')} | ${txt(d, '#nSpeed')} km/h, ${txt
     await sleep(50);
     check(d.querySelectorAll('#history li[data-id]').length === 5, 'borrar un chute');
     check(d.querySelector('#marks').hidden, 'sin marcas con chutes simulados');
+    // pantallas
+    d.querySelector('#tabs [data-scr="hist"]').click();
+    check(!d.querySelector('#scr-hist').hidden && d.querySelector('#scr-kick').hidden && d.querySelector('#dock').hidden, 'pantalla Historial');
+    check(/Esta semana: media \d+ km\/h/.test(txt(d, '#evoNote')), 'resumen semanal: ' + txt(d, '#evoNote'));
+    d.querySelector('#evoMetric [data-m="spin"]').click();
+    check(/rpm/.test(txt(d, '#evoNote')), 'evolución del giro');
+    d.querySelector('#evoFoot [data-f="left"]').click();
+    check(/1 chute\./.test(txt(d, '#evoNote')), 'filtro por pie: ' + txt(d, '#evoNote'));
+    d.querySelector('#tabs [data-scr="more"]').click();
+    check(!d.querySelector('#scr-more').hidden && /Balón simulado, batería 86 %/.test(txt(d, '#ballInfo')), 'Ajustes con los datos del balón');
+    d.querySelector('#tabs [data-scr="kick"]').click();
+    check(!d.querySelector('#scr-kick').hidden && !d.querySelector('#dock').hidden, 'vuelta a Chute');
+    check(errors.length === 0, 'sin errores JS (' + errors.join(' | ') + ')');
+    w.close();
+  }
+
+  console.log('== 1b) Retos por turnos');
+  {
+    const { w, d, errors, app, main, alt } = await boot(false);
+    alt('demo');
+    await waitFor(() => app.S.state === 'idle', 3000, 'conectado demo');
+    d.querySelector('#tabs [data-scr="retos"]').click();
+    d.querySelector('#rtType [data-t="speed"]').click();
+    d.querySelector('#rtPlayers [data-p="2"]').click();
+    d.querySelector('#rtN [data-n="3"]').click();
+    const n1 = d.querySelector('#rtName1'), n2 = d.querySelector('#rtName2');
+    n1.value = 'Antón'; n1.dispatchEvent(new w.Event('input')); n2.value = 'Julio'; n2.dispatchEvent(new w.Event('input'));
+    d.querySelector('#rtStart').click();
+    check(app.CH.active && app.CH.active.players === 2 && !d.querySelector('#scr-kick').hidden, 'reto empezado y vuelta a Chute');
+    check(/Turno de Antón, chute 1 de 3/.test(txt(d, '#chalStrip')), 'franja del reto: ' + txt(d, '#chalStrip'));
+    for (let k = 0; k < 6; k++) {
+      main('arm');
+      await waitFor(() => app.S.state === 'waitingReady', 4000, 'quieto');
+      d.querySelector(`#footSel [data-foot="${k % 2 === 0 ? 'left' : 'right'}"]`).click();
+      await waitFor(() => app.S.state === 'idle' && app.S.current && app.CH.active.turns.length === k + 1, 15000, 'chute del reto ' + (k + 1));
+      if (k === 0) check(/Ahora le toca a Julio/.test(txt(d, '#resChal')), 'veredicto con el siguiente turno: ' + txt(d, '#resChal'));
+      if (k === 1) check(app.settings.foot === 'left', 'vuelve el pie de Antón en su turno');
+    }
+    const c = app.CH.active;
+    check(c.done && app.CH.past.length === 1, 'reto terminado y guardado');
+    d.querySelector('#tabs [data-scr="retos"]').click();
+    check(!d.querySelector('#rbResult').hidden && /(Gana (Antón|Julio)|Empate)/.test(txt(d, '#rbResult')), 'resultado del reto: ' + txt(d, '#rbResult'));
+    check(d.querySelectorAll('#rbGrid .cell.best').length === 2, 'mejor chute de cada uno marcado');
+    d.querySelector('#rbUndo').click();
+    check(!app.CH.active.done && app.CH.active.turns.length === 5 && app.CH.past.length === 0, 'anular el último chute reabre el reto');
+    check(!app.kicks()[0].chal, 'el chute anulado ya no cuenta');
+    d.querySelector('#rbQuit').click();
+    check(app.CH.active && /Seguro/.test(txt(d, '#rbQuit')), 'terminar pide confirmación');
+    d.querySelector('#rbQuit').click();
+    check(app.CH.active == null && !d.querySelector('#retoSetup').hidden, 'reto terminado a mano');
     check(errors.length === 0, 'sin errores JS (' + errors.join(' | ') + ')');
     w.close();
   }
@@ -174,7 +236,7 @@ const summary = (d) => `${txt(d, '#resType')} | ${txt(d, '#nSpeed')} km/h, ${txt
     check(d.querySelector('#support').hidden, 'sin aviso de soporte');
     main('connect');
     await waitFor(() => app.S.state === 'idle', 3000, 'conectado BLE');
-    check(/DB00321654, batería 77 %, en la base/.test(txt(d, '#conn')), 'cabecera: ' + txt(d, '#conn'));
+    check(txt(d, '#conn') === 'En la base' && txt(d, '#battPct') === '77 %' && /DB00321654, batería 77 %, firmware 3\.5, en la base/.test(txt(d, '#ballInfo')), 'cabecera: ' + txt(d, '#conn') + ' / ' + txt(d, '#ballInfo'));
     main('arm');
     await waitFor(() => app.S.state === 'ready', 3000, 'listo BLE');
     await waitFor(() => app.S.state === 'idle' && app.S.current, 15000, 'resultado BLE');

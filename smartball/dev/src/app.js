@@ -3,7 +3,7 @@
   'use strict';
   const $ = (s) => document.querySelector(s);
   const U = SB.UUID16, es = SBScene.es;
-  const VERSION = '2.0';
+  const VERSION = '3.0';
   const ANALYSIS = 2;   // sube cuando cambia el análisis: los chutes guardados se recalculan
   const STORE_KEY = 'smartball.v1.kicks';
   const SETTINGS_KEY = 'smartball.v1.settings';
@@ -25,7 +25,11 @@
   window.addEventListener('unhandledrejection', (e) => log('ERROR promesa: ' + ((e.reason && e.reason.message) || e.reason)));
 
   // ------------------------------------------------------------ ajustes y almacenamiento
-  const settings = { sound: true, speak: true, vibrate: true, cam: false, cam60: false, camAudio: true, openField: false, goalDist: 20, wall: true, view: 'behind' };
+  const settings = {
+    sound: true, speak: true, vibrate: true, cam: false, cam60: false, camAudio: true, openField: false, goalDist: 20, wall: true, view: 'behind',
+    foot: null, rtab: 'vuelo', evoMetric: 'speed', evoFoot: 'all',
+    rt: { type: 'range', min: 60, max: 70, players: 1, n: 5, names: ['', ''] },
+  };
   try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch (e) { /* sin almacenamiento */ }
   const saveSettings = () => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) { /* nada */ } };
   function loadKicks() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { return []; } }
@@ -321,6 +325,7 @@
   // ------------------------------------------------------------ flujo del chute
   async function arm() {
     if (!S.t || !S.t.connected) return;
+    if (screen !== 'kick') showScreen('kick');
     audio();
     clearDownloadTimers();
     S.pendingDownload = false; S.maybeKick = false;
@@ -487,19 +492,22 @@
     const kick = {
       id: Date.now(), at: new Date().toISOString(), dtMs: S.samplePeriodMs, n: samples.length,
       gaps: S.decoder.gaps, partial: !!timedOut && samples.length < 1000, tag: '', demo: !!S.t.isDemo,
-      truth: S.t.isDemo ? S.t.lastTruth : undefined, openField: !!settings.openField, raw: SB.samplesToB64(samples),
+      truth: S.t.isDemo ? S.t.lastTruth : undefined, openField: !!settings.openField, foot: settings.foot || null, raw: SB.samplesToB64(samples),
     };
     const res = analyzeKick(kick);
     kick.res = slim(res);
     kicks.unshift(kick);
     if (kicks.length > 150) kicks.length = 150;
+    const said = chAssign(kick, res);
     storeKicks(kicks);
     const clip = S.clipPromise; S.clipPromise = null;
     S.framing = false;
+    if (screen !== 'kick') showScreen('kick');
     setState('idle');
     renderResult(kick, res, true);
     renderHistory();
-    announce(res);
+    if (screen === 'hist') renderEvo();
+    announce(res, said);
     if (clip) attachClip(kick, clip);
   }
 
@@ -547,11 +555,12 @@
     if (n) { storeKicks(kicks); log('Chutes recalculados con el análisis actual: ' + n); renderHistory(); }
   }
 
-  function announce(r) {
-    if (!r.ok) { beep(300, 0.3); say('No he podido analizar el chute'); return; }
+  function announce(r, extra) {
+    if (!r.ok) { beep(300, 0.3); say('No he podido analizar el chute' + (extra ? '. ' + extra : '')); return; }
     beep(1568, 0.1); setTimeout(() => beep(2093, 0.14), 120);
     const parts = [Math.round(r.speedKmh) + ' kilómetros por hora', Math.round(r.rpm) + ' revoluciones'];
     if (r.type) parts.push(r.type.toLowerCase());
+    if (extra) parts.push(extra);
     say(parts.join('. '));
   }
 
@@ -641,12 +650,13 @@
     $('#banner').className = 'banner' + (d.cls ? ' ' + d.cls : '');
     $('#progress').hidden = st !== 'downloading';
     if (st === 'downloading') setProgress(0);
-    renderDock(); renderConn(); refreshStage();
+    renderDock(); renderConn(); refreshStage(); renderFootSel();
   }
   function setProgress(f) {
     const p = Math.round(Math.max(0, Math.min(1, f)) * 100);
     $('#progressBar').style.width = p + '%';
-    $('#statusSub').textContent = p + ' %. Mantén el balón cerca del móvil.';
+    $('#statusText').textContent = 'Descargando ' + p + ' %';
+    $('#statusSub').textContent = 'Mantén el balón cerca del móvil.';
   }
   function renderDock() {
     const d = DOCK[S.state] || DOCK.idle, main = $('#btnMain'), alt = $('#btnAlt'), cam = $('#btnCam');
@@ -656,37 +666,80 @@
     alt.hidden = !d[2]; alt.textContent = d[2] || ''; alt.dataset.act = d[3] || '';
     cam.hidden = !SBVideo.supported();
     cam.setAttribute('aria-pressed', String(!!settings.cam));
+    $('#dock').hidden = screen !== 'kick';
   }
   function renderConn() {
-    const el = $('#conn');
-    $('#btnDisc').hidden = !(S.t && S.t.connected && S.state === 'idle');
-    if (!S.t || !S.t.connected) { el.textContent = S.state === 'needReconnect' ? 'Balón fuera de alcance' : 'Sin balón'; return; }
-    const i = S.info, parts = [S.t.isDemo ? 'Demostración' : (i.name || 'Smart Ball')];
+    const el = $('#conn'), on = !!(S.t && S.t.connected), i = S.info || {};
+    $('#btnDisc').hidden = !(on && S.state === 'idle');
+    $('#pill').className = 'pill' + (on ? ' on' : S.state === 'needReconnect' ? ' lost' : '');
+    const batt = on && i.battery != null;
+    $('#batt').hidden = !batt;
+    if (batt) { $('#battPct').textContent = i.battery + ' %'; $('#battLvl').setAttribute('width', String(Math.max(1, 12.9 * Math.min(100, i.battery) / 100))); }
+    if (!on) {
+      el.textContent = S.state === 'needReconnect' ? 'Fuera de alcance' : 'Sin balón';
+      $('#ballInfo').textContent = S.state === 'needReconnect' ? 'Fuera de alcance: acércalo al móvil.' : 'Sin conectar.';
+      return;
+    }
+    el.textContent = i.status && i.status.onCharger ? (i.status.charging ? 'Cargando' : 'En la base') : (S.t.isDemo ? 'Demostración' : 'Conectado');
+    const parts = [S.t.isDemo ? 'Balón simulado' : (i.name || 'Smart Ball')];
     if (i.battery != null) parts.push('batería ' + i.battery + ' %');
+    if (i.firmware) parts.push('firmware ' + i.firmware);
     if (i.status && i.status.onCharger) parts.push(i.status.charging ? 'cargando' : 'en la base');
-    el.textContent = parts.join(', ');
+    $('#ballInfo').textContent = parts.join(', ') + '.';
   }
   function stageMode() {
     const live = ['arming', 'waitingReady', 'ready', 'kicked'].includes(S.state) || (S.framing && ['idle', 'disconnected', 'connecting'].includes(S.state));
     return settings.cam && S.cam.open && live ? 'camera' : 'scene';
   }
+  // Mientras se prepara y se descarga el chute, la escena ocupa toda la pantalla; después, el resultado.
+  const CYCLE = ['arming', 'waitingReady', 'ready', 'kicked', 'downloading', 'needReconnect', 'needRetry'];
+  function heroMode() { return !(S.current != null && S.currentRes && !CYCLE.includes(S.state)); }
   function refreshStage() {
-    const mode = stageMode();
+    const mode = stageMode(), hero = heroMode();
+    $('#scr-kick').classList.toggle('hero', hero);
     $('#preview').hidden = mode !== 'camera';
-    const showing = S.current != null && S.currentRes && mode === 'scene';
-    const quietState = S.state === 'idle' || S.state === 'disconnected';
-    $('#banner').hidden = quietState && showing;
-    $('#views').hidden = !(quietState && showing && S.fl);
+    $('#result').hidden = hero;
+    $('#banner').hidden = !hero;
+    $('#views').hidden = hero || !S.fl;
+    if (hero) $('#minibar').classList.remove('on');
+    $('#footSel').hidden = !(hero && S.t && S.t.connected && ['idle', 'arming', 'waitingReady', 'ready'].includes(S.state));
     document.querySelectorAll('#views [data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === scene.view)));
-    if (mode === 'scene') scene.draw();
+    if (hero && screen === 'kick') { const bh = $('#banner').offsetHeight; if (bh) S.bannerMax = Math.max(S.bannerMax || 0, bh); scene.heroBottom = S.bannerMax || 0; }
+    scene.setHero(hero);
+    if (mode === 'scene' && screen === 'kick') scene.draw();
+    renderChalStrip();
+  }
+  function renderFootSel() {
+    document.querySelectorAll('#footSel [data-foot]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.foot === settings.foot)));
+  }
+
+  // ------------------------------------------------------------ pantallas
+  let screen = 'kick';
+  function showScreen(name) {
+    if (!document.querySelector(`.screen[data-scr="${name}"]`)) name = 'kick';
+    const changed = screen !== name;
+    screen = name;
+    document.querySelectorAll('.screen').forEach((s) => { s.hidden = s.dataset.scr !== name; });
+    document.querySelectorAll('#tabs [data-scr]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.scr === name)));
+    const sc = $('#screens'); if (changed && sc) sc.scrollTop = 0;
+    renderDock(); placeToast();
+    if (name === 'kick') { refreshStage(); redrawPanels(); }
+    else if (name === 'hist') { renderHistory(); renderEvo(); }
+    else if (name === 'retos') renderChallenge();
+    else if (name === 'more') renderUsage();
   }
 
   let toastTimer = null;
   function toast(msg) {
-    const el = $('#toast'), dock = document.querySelector('.dock'); el.textContent = msg; el.hidden = false;
-    if (dock && dock.offsetHeight) el.style.bottom = (dock.offsetHeight + 8) + 'px';
+    const el = $('#toast'); el.textContent = msg; el.hidden = false;
+    placeToast();
     clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 7000);
     log('Aviso: ' + msg);
+  }
+  function placeToast() {
+    const el = $('#toast'); if (!el || el.hidden) return;
+    const anchor = [$('#dock'), $('#tabs')].find((x) => x && !x.hidden && x.offsetHeight);
+    if (anchor && anchor.getBoundingClientRect) { const top = anchor.getBoundingClientRect().top; if (top > 0) el.style.bottom = Math.max(8, window.innerHeight - top + 8) + 'px'; }
   }
   function showError(e) {
     const m = (e && e.message) || String(e);
@@ -776,7 +829,7 @@
     const when = new Date(kick.at);
     $('#resWhen').textContent = when.toLocaleString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) + (kick.demo ? ', simulación' : '');
     $('#tag').value = kick.tag || '';
-    $('#resBody').hidden = !res.ok; $('#resBad').hidden = res.ok; $('#detailBlock').hidden = !res.ok;
+    $('#resBody').hidden = !res.ok; $('#resBad').hidden = res.ok;
     const notes = [];
     if (!res.ok) {
       $('#resType').textContent = 'Chute sin analizar';
@@ -787,6 +840,10 @@
       $('#nSpeed').textContent = Math.round(res.speedKmh);
       $('#nSpin').textContent = Math.round(res.rpm);
       $('#cSpin').textContent = `${es(res.rps, 1)} vueltas por segundo`;
+      $('#mbType').textContent = res.type || ''; $('#mbSpeed').textContent = Math.round(res.speedKmh); $('#mbSpin').textContent = Math.round(res.rpm);
+      const pk = prevKick(kick);
+      $('#dSpeed').textContent = pk ? deltaText(res.speedKmh - pk.res.speedKmh, 'km/h') : '';
+      $('#dSpin').textContent = pk ? deltaText(res.rpm - pk.res.rpm, 'rpm') : '';
       const fl = SB.kickFlight(res);
       S.fl = fl;
       $('#resReading').textContent = reading(res, fl);
@@ -818,6 +875,7 @@
       }
       // giro y golpeo
       const axis = spinAxis(res);
+      S.spinArgs = [axis, res.rpm];
       spinBall.set(axis, res.rpm, 20);
       $('#spinCap').innerHTML = axis ? `<b>${es(res.axisAboveHorizontalDeg, 0)}° de inclinación</b>Visto desde detrás, 20 veces más lento.` + (res.topConfidence === 'baja' ? ' La orientación del eje respecto al tiro es dudosa.' : '') : '<b>Sin giro apreciable</b>No hay eje que dibujar.';
       const sp = strikeOf(res);
@@ -825,7 +883,7 @@
       $('#strikeCap').innerHTML = `<b>Punto de golpeo</b>${escapeHtml(strikeText(res, sp))}`;
       const rows = [];
       if (res.topRpm != null && !res.lowSpin) rows.push([res.topRpm >= 0 ? 'Liftado' : 'Cortado', `${signed(res.topRpm)} rpm ${confTag(res.topConfidence)}`]);
-      if (res.sideRpm != null && !res.lowSpin) rows.push(['Rosca', `${signed(res.sideRpm)} rpm <small>${Math.abs(res.sideRpm) < 30 ? 'recto' : 'hacia la ' + (res.sideRpm > 0 ? 'izquierda' : 'derecha')}</small>`]);
+      if (res.sideRpm != null && !res.lowSpin) { const fh = footHint(res, kick.foot); rows.push(['Rosca', `${signed(res.sideRpm)} rpm <small>${Math.abs(res.sideRpm) < 30 ? 'recto' : 'hacia la ' + (res.sideRpm > 0 ? 'izquierda' : 'derecha')}${fh ? ', ' + fh : ''}</small>`]); }
       if (res.rifleRpm != null && !res.lowSpin) rows.push(['En bala', `${signed(res.rifleRpm)} rpm <small>no desvía</small>`]);
       rows.push(['Giro total', `${Math.round(res.rpm)} rpm ${confTag(res.spinConfidence)}`]);
       $('#split').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
@@ -840,9 +898,70 @@
     $('#resNotes').innerHTML = notes.join('');
     document.querySelectorAll('#distSeg [data-d]').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.d === settings.goalDist)));
     $('#set_wall').checked = !!settings.wall;
+    renderResMeta(kick, res);
+    $('#rtVideo').hidden = !kick.video;
     refreshStage();
+    showRtab(settings.rtab);
     if (animate && S.fl) scene.play();
     loadClip(kick);
+  }
+  // pie, favorito y reto del chute que se está viendo
+  const FOOT = { left: 'izquierdo', right: 'derecho' };
+  function renderResMeta(kick, res) {
+    $('#resFoot').innerHTML = kick.foot ? `Pie <b>${FOOT[kick.foot]}</b>` : 'Pie sin indicar';
+    $('#resFav').setAttribute('aria-pressed', String(!!kick.fav));
+    $('#resFav').textContent = kick.fav ? '★ Favorito' : '☆ Favorito';
+    const vc = $('#resChal'), ch = kick.chal;
+    if (!ch) { vc.hidden = true; return; }
+    const who = ch.name ? ch.name + ', ' : '';
+    let txt, cls = '';
+    if (ch.type === 'range') {
+      cls = ch.hit ? 'hit' : 'miss';
+      txt = ch.v == null ? `Reto: ${who}chute ${ch.k} de ${ch.n}. Sin velocidad: cuenta como fuera.`
+        : `${ch.hit ? 'Dentro' : 'Fuera'} del rango: ${Math.round(ch.v)} km/h, entre ${ch.min} y ${ch.max}. ${who ? who.charAt(0).toUpperCase() + who.slice(1) : 'Chute '}${who ? 'chute ' : ''}${ch.k} de ${ch.n}.`;
+    } else txt = `Reto «${RT[ch.type].label.toLowerCase()}»: ${who}chute ${ch.k} de ${ch.n}.`;
+    const c = CH.active;
+    if (c && c.id === ch.id) {
+      const last = c.turns[c.turns.length - 1];
+      if (c.done) { const w = chWinner(c); txt += c.players > 1 ? (w < 0 ? ' Reto terminado: empate.' : ` Reto terminado: gana ${chName(c, w)}.`) : ' Reto terminado.'; }
+      else if (last && last.kickId === kick.id) txt += c.players > 1 ? ` Ahora le toca a ${chName(c, chTurnInfo(c).player)}.` : '';
+    }
+    vc.textContent = txt; vc.className = 'verdict' + (cls ? ' ' + cls : ''); vc.hidden = false;
+  }
+  function prevKick(kick) {
+    const i = kicks.indexOf(kick); if (i < 0) return null;
+    for (let j = i + 1; j < kicks.length; j++) { const k = kicks[j]; if (!!k.demo === !!kick.demo && k.res && k.res.ok) return k; }
+    return null;
+  }
+  function deltaText(d, unit) {
+    if (d == null || !isFinite(d)) return '';
+    const r = Math.round(d);
+    return r === 0 ? 'Igual que el anterior' : `${Math.abs(r)} ${unit} ${r > 0 ? 'más' : 'menos'} que el anterior`;
+  }
+  // Con el pie conocido, la rosca dice con qué parte se golpeó: con la derecha, el interior curva a la izquierda.
+  function footHint(res, foot) {
+    if (!foot || res.lowSpin || res.sideRpm == null || Math.abs(res.sideRpm) < 120) return '';
+    const inside = (foot === 'right') === (res.sideRpm > 0);
+    return inside ? 'típico del interior' : 'típico del exterior';
+  }
+  // pestañas del detalle
+  function showRtab(name) {
+    const ok = !!(S.currentRes && S.currentRes.ok), vid = !$('#rtVideo').hidden;
+    if (name === 'video' && !vid) name = 'vuelo';
+    if (!ok && vid) name = 'video';
+    if (name !== settings.rtab && ok) { settings.rtab = name; saveSettings(); }
+    document.querySelectorAll('#rtabs [data-rp]').forEach((b) => { b.setAttribute('aria-selected', String(b.dataset.rp === name)); if (b.dataset.rp !== 'video') b.hidden = !ok; });
+    $('#rtabs').hidden = !ok && !vid;
+    document.querySelectorAll('#result .rp').forEach((p) => { p.hidden = p.dataset.rp !== name || (!ok && name !== 'video'); });
+    redrawPanels();
+  }
+  function redrawPanels() {
+    const res = S.currentRes; if (!res || !res.ok || screen !== 'kick' || heroMode()) return;
+    if (settings.rtab === 'giro') {
+      if (S.spinArgs) spinBall.set(S.spinArgs[0], S.spinArgs[1], 20);
+      SBScene.drawStrike($('#strikeCanvas'), strikeOf(res));
+    }
+    if (settings.rtab === 'video' && P.kick) drawClipOverlay();
   }
   function rerenderCurrent(animate) {
     const k = kicks.find((x) => x.id === S.current); if (!k) return;
@@ -878,6 +997,7 @@
     $('#vPlay').textContent = 'Ver';
     measureLabel();
     $('#clipBlock').hidden = false;
+    if ($('#rtVideo').hidden) { $('#rtVideo').hidden = false; showRtab(settings.rtab); }
     updateClipUi();
   }
   function onClipMeta() {
@@ -1020,7 +1140,7 @@
   async function deleteClip() {
     const k = P.kick; if (!k) return;
     await SBVideo.ClipStore.del(k.id); delete k.video; delete k.elevVideo; delete k.vtaps;
-    storeKicks(kicks); unloadClip(); $('#clipBlock').hidden = true; renderHistory(); renderUsage(); rerenderCurrent(false);
+    storeKicks(kicks); unloadClip(); $('#clipBlock').hidden = true; $('#rtVideo').hidden = true; renderHistory(); renderUsage(); rerenderCurrent(false);
   }
   async function renderUsage() {
     const el = $('#clipUsage'); if (!el) return;
@@ -1038,7 +1158,7 @@
       const r = k.res || {};
       const d = new Date(k.at).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
       const main = r.ok ? `<b>${es(r.speedKmh, 0)} km/h</b>, ${es(r.rpm, 0)} rpm, ${escapeHtml((r.type || '').toLowerCase())}` : 'sin analizar';
-      const meta = [d]; if (k.demo) meta.push('simulación'); if (k.video) meta.push('con vídeo'); if (k.tag) meta.push(escapeHtml(k.tag));
+      const meta = [d]; if (k.foot) meta.push('pie ' + FOOT[k.foot]); if (k.demo) meta.push('simulación'); if (k.video) meta.push('con vídeo'); if (k.tag) meta.push(escapeHtml(k.tag));
       return `<li data-id="${k.id}" class="${S.current === k.id ? 'sel' : ''}"><div><div class="h2">${main}</div><div class="h1">${meta.join(', ')}</div></div><button class="ico${k.fav ? ' on' : ''}" data-fav="${k.id}" aria-label="${k.fav ? 'Quitar de favoritos' : 'Marcar como favorito'}" aria-pressed="${!!k.fav}">★</button><button class="ico" data-del="${k.id}" aria-label="Borrar este chute">✕</button></li>`;
     }).join('');
   }
@@ -1053,10 +1173,10 @@
 
   // ------------------------------------------------------------ exportar / importar
   function csvOf(list) {
-    const head = ['fecha', 'etiqueta', 'velocidad_kmh', 'rpm', 'vueltas_s', 'eje_sobre_horizontal_grados', 'liftado_rpm', 'rosca_rpm', 'bala_rpm', 'salida_grados', 'salida_fuente', 'alcance_m', 'altura_max_m', 'segundo_impacto_ms', 'tipo', 'fiabilidad_giro', 'fiabilidad_liftado', 'video', 'simulado'];
+    const head = ['fecha', 'pie', 'etiqueta', 'velocidad_kmh', 'rpm', 'vueltas_s', 'eje_sobre_horizontal_grados', 'liftado_rpm', 'rosca_rpm', 'bala_rpm', 'salida_grados', 'salida_fuente', 'alcance_m', 'altura_max_m', 'segundo_impacto_ms', 'tipo', 'fiabilidad_giro', 'fiabilidad_liftado', 'video', 'simulado'];
     const num = (x, d) => (x == null || !isFinite(x) ? '' : x.toFixed(d || 0).replace('.', ','));
     const q = (s) => '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"';
-    const rows = list.map((k) => { const r = k.res || {}; return [q(new Date(k.at).toLocaleString('es-ES')), q(k.tag), num(r.speedKmh), num(r.rpm), num(r.rps, 1), num(r.axisAboveHorizontalDeg), num(r.topRpm), num(r.sideRpm), num(r.rifleRpm), num(r.elevDeg, 1), q(r.elevSource || 'balón'), num(r.reachM, 1), num(r.apexM, 1), num(r.secondImpactMs), q(r.ok ? r.type : r.reason), q(r.spinConfidence), q(r.topConfidence), k.video ? 'sí' : 'no', k.demo ? 'sí' : 'no'].join(';'); });
+    const rows = list.map((k) => { const r = k.res || {}; return [q(new Date(k.at).toLocaleString('es-ES')), q(k.foot ? FOOT[k.foot] : ''), q(k.tag), num(r.speedKmh), num(r.rpm), num(r.rps, 1), num(r.axisAboveHorizontalDeg), num(r.topRpm), num(r.sideRpm), num(r.rifleRpm), num(r.elevDeg, 1), q(r.elevSource || 'balón'), num(r.reachM, 1), num(r.apexM, 1), num(r.secondImpactMs), q(r.ok ? r.type : r.reason), q(r.spinConfidence), q(r.topConfidence), k.video ? 'sí' : 'no', k.demo ? 'sí' : 'no'].join(';'); });
     return '﻿' + head.join(';') + '\n' + rows.join('\n');
   }
   function jsonOf(list) {
@@ -1093,12 +1213,296 @@
     } catch (e) { showError(e); }
   }
 
+  // ------------------------------------------------------------ evolución por semanas
+  const EVO = {
+    speed: { label: 'velocidad', unit: 'km/h', of: (r) => r.speedKmh },
+    spin: { label: 'giro', unit: 'rpm', of: (r) => r.rpm },
+    top: { label: 'liftado', unit: 'rpm', of: (r) => (r.topConfidence && r.topConfidence !== 'baja' && r.topRpm > 0 ? r.topRpm : null) },   // solo liftados
+  };
+  const EV = { data: null, sel: null, geom: null };
+  function weekStart(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+  const fmtDay = (d) => d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '');
+  function evoData() {
+    const real = kicks.filter((k) => !k.demo && k.res && k.res.ok);
+    const base = real.length ? real : kicks.filter((k) => k.res && k.res.ok);
+    const M = EVO[settings.evoMetric] || EVO.speed, f = settings.evoFoot;
+    const pts = base.filter((k) => f === 'all' || k.foot === f).map((k) => ({ t: new Date(k.at), v: M.of(k.res) })).filter((p) => p.v != null && isFinite(p.v));
+    const out = { pts, weeks: [], demo: !real.length && base.length > 0, M };
+    if (!pts.length) return out;
+    const now = weekStart(new Date()), first = weekStart(new Date(Math.min(...pts.map((p) => p.t.getTime()))));
+    const nW = Math.max(1, Math.min(12, Math.round((now - first) / (7 * 864e5)) + 1));
+    for (let i = nW - 1; i >= 0; i--) { const d = new Date(now); d.setDate(d.getDate() - 7 * i); out.weeks.push({ start: d, vals: [] }); }
+    for (const p of pts) { const ws = weekStart(p.t).getTime(); const wk = out.weeks.find((x) => x.start.getTime() === ws); if (wk) wk.vals.push(p); }
+    for (const wk of out.weeks) { const v = wk.vals.map((p) => p.v); wk.n = v.length; wk.mean = v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; wk.best = v.length ? Math.max(...v) : null; }
+    return out;
+  }
+  function niceTicks(lo, hi, n) {
+    if (!(hi > lo)) { const d = Math.max(1, Math.abs(lo) * 0.1); lo -= d; hi += d; }
+    const raw = (hi - lo) / Math.max(1, n), mag = Math.pow(10, Math.floor(Math.log10(raw))), fr = raw / mag;
+    const step = (fr <= 1 ? 1 : fr <= 2 ? 2 : fr <= 5 ? 5 : 10) * mag, out = [];
+    for (let v = Math.floor(lo / step) * step; v <= Math.ceil(hi / step) * step + step * 1e-9; v += step) out.push(Math.round(v * 1e6) / 1e6);
+    return out;
+  }
+  function renderEvo() {
+    document.querySelectorAll('#evoMetric [data-m]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.m === settings.evoMetric)));
+    document.querySelectorAll('#evoFoot [data-f]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.f === settings.evoFoot)));
+    const D = evoData(); EV.data = D; EV.sel = null;
+    const withData = D.weeks.filter((w) => w.n);
+    $('#evoLegend').hidden = !withData.length;
+    $('#evoNote').textContent = !withData.length ? (kicks.length ? 'No hay chutes con este filtro.' : 'Cuando haya chutes, aquí verás cómo evolucionan semana a semana.') : evoSummary(D);
+    drawEvo();
+    renderEvoTable(D);
+  }
+  function evoSummary(D) {
+    const ws = D.weeks.filter((w) => w.n), last = ws[ws.length - 1], prev = ws[ws.length - 2], u = D.M.unit, n0 = (x) => es(x, 0);
+    const isNow = last === D.weeks[D.weeks.length - 1];
+    let s = `${isNow ? 'Esta semana' : 'Semana del ' + fmtDay(last.start)}: media ${n0(last.mean)} ${u} y mejor ${n0(last.best)} ${u}, en ${last.n} ${last.n === 1 ? 'chute' : 'chutes'}.`;
+    if (prev) { const d = Math.round(last.mean - prev.mean); s += ` Semana del ${fmtDay(prev.start)}: media ${n0(prev.mean)} ${u} (${d === 0 ? 'igual' : (d > 0 ? d + ' más ahora' : -d + ' menos ahora')}).`; }
+    if (settings.evoMetric === 'top') s += ' Solo cuentan los chutes liftados.';
+    if (D.demo) s += ' Son chutes de simulación: cuando haya reales, se usan solo esos.';
+    return s;
+  }
+  function drawEvo() {
+    const cv = $('#evoChart'), f = SBScene.fit(cv); if (!f) return;
+    const { ctx, w, h } = f, D = EV.data;
+    const padL = 42, padR = 12, padT = 12, padB = 28;
+    if (!D || !D.weeks.some((x) => x.n)) {
+      ctx.strokeStyle = 'rgba(244,247,241,0.14)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(padL, h - padB + 0.5); ctx.lineTo(w - padR, h - padB + 0.5); ctx.stroke();
+      EV.geom = null; return;
+    }
+    const weeks = D.weeks, vals = D.pts.filter((p) => p.t >= weeks[0].start).map((p) => p.v);
+    const ticks = niceTicks(Math.min(...vals), Math.max(...vals), 4), lo = ticks[0], hi = ticks[ticks.length - 1];
+    const bw = (w - padL - padR) / weeks.length;
+    const X = (i) => padL + (i + 0.5) * bw, Y = (v) => padT + (hi - v) / ((hi - lo) || 1) * (h - padT - padB);
+    ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(244,247,241,0.14)'; ctx.fillStyle = 'rgba(244,247,241,0.74)'; ctx.textAlign = 'right';
+    for (const t of ticks) { const y = Math.round(Y(t)) + 0.5; ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke(); ctx.fillText(String(t), padL - 7, y + 4); }
+    ctx.textAlign = 'center';
+    const every = Math.max(1, Math.ceil(52 / bw));
+    weeks.forEach((wk, i) => { if ((weeks.length - 1 - i) % every === 0) ctx.fillText(fmtDay(wk.start), X(i), h - 9); });
+    if (EV.sel != null && weeks[EV.sel]) { const x = Math.round(X(EV.sel)) + 0.5; ctx.strokeStyle = 'rgba(244,247,241,0.45)'; ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, h - padB); ctx.stroke(); }
+    // cada chute, repartido dentro de su semana según el día
+    ctx.fillStyle = 'rgba(244,247,241,0.5)';
+    weeks.forEach((wk, i) => { for (const p of wk.vals) { const x = padL + i * bw + bw * (0.18 + 0.64 * ((p.t.getDay() + 6) % 7) / 6); ctx.beginPath(); ctx.arc(x, Y(p.v), 2.6, 0, Math.PI * 2); ctx.fill(); } });
+    // media de la semana: línea de 2 px
+    ctx.strokeStyle = '#F4F7F1'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    const mid = weeks.map((wk, i) => (wk.mean == null ? null : [X(i), Y(wk.mean)])).filter(Boolean);
+    if (mid.length > 1) { ctx.beginPath(); mid.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]))); ctx.stroke(); }
+    for (const q of mid) { ctx.beginPath(); ctx.moveTo(q[0] - 7, q[1]); ctx.lineTo(q[0] + 7, q[1]); ctx.stroke(); }
+    // la mejor de la semana: punto amarillo con anillo del color del fondo
+    weeks.forEach((wk, i) => { if (wk.best == null) return; ctx.beginPath(); ctx.arc(X(i), Y(wk.best), 5, 0, Math.PI * 2); ctx.fillStyle = '#FFD60A'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#0B5539'; ctx.stroke(); });
+    EV.geom = { padL, bw, n: weeks.length };
+  }
+  function evoPick(i) {
+    const D = EV.data; if (!D || !EV.geom) return;
+    EV.sel = Math.max(0, Math.min(D.weeks.length - 1, i));
+    const wk = D.weeks[EV.sel], u = D.M.unit;
+    $('#evoNote').textContent = wk.n ? `Semana del ${fmtDay(wk.start)}: media ${es(wk.mean, 0)} ${u}, mejor ${es(wk.best, 0)} ${u}, ${wk.n} ${wk.n === 1 ? 'chute' : 'chutes'}.` : `Semana del ${fmtDay(wk.start)}: sin chutes.`;
+    drawEvo();
+  }
+  function renderEvoTable(D) {
+    const t = $('#evoTable'); if (!t) return;
+    const rows = D.weeks.filter((w) => w.n).reverse();
+    t.innerHTML = rows.length ? `<thead><tr><th>Semana del</th><th>Chutes</th><th>Media</th><th>Mejor</th></tr></thead><tbody>${rows.map((w) => `<tr><td>${fmtDay(w.start)}</td><td>${w.n}</td><td>${es(w.mean, 0)}</td><td>${es(w.best, 0)}</td></tr>`).join('')}</tbody>` : '';
+    $('#evoTableBox').hidden = !rows.length;
+    $('#evoTableUnit').textContent = D.M.unit;
+  }
+
+  // ------------------------------------------------------------ retos
+  const CH_KEY = 'smartball.v1.retos';
+  const CH = { active: null, past: [] };
+  try { Object.assign(CH, JSON.parse(localStorage.getItem(CH_KEY) || '{}')); } catch (e) { /* sin almacenamiento */ }
+  const saveCH = () => { try { localStorage.setItem(CH_KEY, JSON.stringify(CH)); } catch (e) { /* nada */ } };
+  const RT = {
+    range: { label: 'Velocidad en un rango', unit: 'km/h', of: (r) => r.speedKmh },
+    speed: { label: 'El más rápido', unit: 'km/h', of: (r) => r.speedKmh },
+    spin: { label: 'El de más giro', unit: 'rpm', of: (r) => r.rpm },
+    top: { label: 'El más liftado', unit: 'rpm', of: (r) => (r.lowSpin ? 0 : r.topRpm) },
+  };
+  const chTitle = (c) => (c.type === 'range' ? `Entre ${c.min} y ${c.max} km/h` : RT[c.type].label);
+  const chName = (c, p) => ((c.names && c.names[p]) || '').trim() || 'Jugador ' + (p + 1);
+  function chTurnInfo(c) { const i = c.turns.length; return { idx: i, player: i % c.players, k: Math.floor(i / c.players) + 1, done: i >= c.n * c.players }; }
+  function chScore(c, p) {
+    const mine = c.turns.filter((t) => t.player === p);
+    if (c.type === 'range') return mine.filter((t) => t.hit).length;
+    const v = mine.map((t) => t.v).filter((x) => x != null && isFinite(x));
+    return v.length ? Math.max(...v) : null;
+  }
+  function chCompare(c) {   // -1 empate, 0 o 1 quién va delante (o gana)
+    if (c.players < 2) return null;
+    const a = chScore(c, 0), b = chScore(c, 1);
+    const ra = a == null ? -Infinity : Math.round(a), rb = b == null ? -Infinity : Math.round(b);
+    return ra === rb ? -1 : ra > rb ? 0 : 1;
+  }
+  const chWinner = chCompare;
+  function chStart(cfg) {
+    const names = (cfg.names || ['', '']).slice(0, 2);
+    CH.active = { id: Date.now(), type: cfg.type, min: cfg.min, max: cfg.max, players: cfg.players === 2 ? 2 : 1, n: cfg.n, names, turns: [], startedAt: new Date().toISOString(), done: false };
+    saveCH(); chRefresh();
+  }
+  function chRefresh() { renderChallenge(); renderChalStrip(); $('#tabBadge').hidden = !(CH.active && !CH.active.done); }
+  function chAssign(kick, res) {
+    const c = CH.active; if (!c || c.done) return '';
+    const ti = chTurnInfo(c); if (ti.done) return '';
+    const raw = res && res.ok ? RT[c.type].of(res) : null, v = raw == null || !isFinite(raw) ? null : Math.round(raw * 10) / 10;
+    const hit = c.type === 'range' ? v != null && v >= c.min && v <= c.max : null;
+    c.turns.push({ kickId: kick.id, player: ti.player, v, hit });
+    if (kick.foot) { c.feet = c.feet || [null, null]; c.feet[ti.player] = kick.foot; }
+    kick.chal = { id: c.id, player: ti.player, name: c.players > 1 ? chName(c, ti.player) : '', k: ti.k, n: c.n, type: c.type, min: c.min, max: c.max, v, hit };
+    const parts = [];
+    if (c.type === 'range') parts.push(hit ? 'Dentro' : 'Fuera');
+    if (chTurnInfo(c).done) {
+      c.done = true; c.finishedAt = new Date().toISOString();
+      const w = chWinner(c);
+      CH.past.unshift({ id: c.id, at: c.finishedAt, title: chTitle(c), summary: chSummary(c) });
+      if (CH.past.length > 20) CH.past.length = 20;
+      parts.push('Reto terminado' + (c.players > 1 ? (w < 0 ? ', empate' : ', gana ' + chName(c, w)) : ''));
+    } else if (c.players > 1) {
+      const nx = chTurnInfo(c).player;
+      parts.push('Le toca a ' + chName(c, nx));
+      if (c.feet && c.feet[nx]) { settings.foot = c.feet[nx]; saveSettings(); }   // cada jugador con su pie
+    }
+    saveCH(); chRefresh();
+    return parts.join('. ');
+  }
+  function chScoreLine(c) {
+    const u = RT[c.type].unit, sc = (p) => { const s = chScore(c, p); return c.type === 'range' ? `${s} de ${c.n}` : (s == null ? '—' : `${Math.round(s)} ${u}`); };
+    if (c.players < 2) return c.type === 'range' ? `${sc(0)} dentro del rango.` : `Mejor chute: ${sc(0)}.`;
+    return `${chName(c, 0)} ${sc(0)}, ${chName(c, 1)} ${sc(1)}.`;
+  }
+  function chSummary(c) {
+    if (c.players < 2) return chScoreLine(c);
+    const w = chWinner(c);
+    return (w < 0 ? 'Empate. ' : `Gana ${chName(c, w)}. `) + chScoreLine(c);
+  }
+  function chUndo() {
+    const c = CH.active; if (!c || !c.turns.length) return;
+    const t = c.turns.pop();
+    const k = kicks.find((x) => x.id === t.kickId); if (k) { delete k.chal; storeKicks(kicks); }
+    if (c.done) { c.done = false; delete c.finishedAt; CH.past = CH.past.filter((x) => x.id !== c.id); }
+    saveCH(); chRefresh();
+    if (k && S.current === k.id) renderResMeta(k, S.currentRes);
+    toast('Chute anulado: ya no cuenta para el reto.');
+  }
+  let quitAt = 0;
+  function chQuit() {
+    const c = CH.active; if (!c) return;
+    if (!c.done && c.turns.length && Date.now() - quitAt > 4000) {
+      quitAt = Date.now(); $('#rbQuit').textContent = '¿Seguro? Pulsa otra vez';
+      setTimeout(() => { if (CH.active === c && !c.done) $('#rbQuit').textContent = 'Terminar el reto'; }, 4000);
+      return;
+    }
+    quitAt = 0; CH.active = null; saveCH(); chRefresh();
+  }
+  function renderChallenge() {
+    const c = CH.active;
+    $('#retoSetup').hidden = !!c; $('#retoBoard').hidden = !c;
+    if (!c) { renderRtSetup(); renderRtPast(); return; }
+    $('#rbTitle').textContent = chTitle(c);
+    $('#rbSub').textContent = c.players > 1 ? `${chName(c, 0)} contra ${chName(c, 1)}, ${c.n} chutes cada uno, por turnos.` : `${c.n} chutes.`;
+    const ti = chTurnInfo(c), lead = chCompare(c);
+    $('#rbGrid').innerHTML = Array.from({ length: c.players }, (_, p) => {
+      const mine = c.turns.filter((t) => t.player === p), sc = chScore(c, p);
+      let bestI = -1;
+      if (c.type !== 'range') { let bv = -Infinity; mine.forEach((t, i) => { if (t.v != null && t.v > bv) { bv = t.v; bestI = i; } }); }
+      const cells = Array.from({ length: c.n }, (_, i) => {
+        const t = mine[i];
+        if (!t) return `<span class="cell${!c.done && ti.player === p && ti.k === i + 1 ? ' now' : ''}" aria-label="Chute ${i + 1}, pendiente">${i + 1}</span>`;
+        const val = t.v == null ? '—' : Math.round(t.v);
+        if (c.type === 'range') return `<span class="cell ${t.hit ? 'hit' : 'miss'}" aria-label="Chute ${i + 1}: ${val} km/h, ${t.hit ? 'dentro' : 'fuera'}">${val}</span>`;
+        return `<span class="cell ${i === bestI ? 'best' : 'val'}" aria-label="Chute ${i + 1}: ${val} ${RT[c.type].unit}">${val}</span>`;
+      }).join('');
+      const scoreTxt = c.type === 'range' ? String(sc) : (sc == null ? '—' : String(Math.round(sc)));
+      const sub = c.type === 'range' ? `dentro del rango, de ${mine.length} ${mine.length === 1 ? 'chute' : 'chutes'}` : `su mejor chute, en ${RT[c.type].unit}`;
+      return `<div class="prow${c.players > 1 && lead === p ? ' lead' : ''}"><div class="name">${escapeHtml(chName(c, p))}<small>${sub}</small></div><div class="score">${scoreTxt}</div><div class="cells">${cells}</div></div>`;
+    }).join('');
+    const res = $('#rbResult');
+    if (c.done) {
+      const w = chWinner(c), head = c.players > 1 ? (w < 0 ? 'Empate' : `Gana ${escapeHtml(chName(c, w))}`) : (c.type === 'range' ? `${chScore(c, 0)} de ${c.n} dentro` : `Mejor chute: ${Math.round(chScore(c, 0) || 0)} ${RT[c.type].unit}`);
+      res.innerHTML = `<b>${head}</b>${c.players > 1 ? escapeHtml(chScoreLine(c)) : ''}`; res.hidden = false;
+      $('#rbTurn').textContent = '';
+    } else {
+      res.hidden = true;
+      $('#rbTurn').textContent = c.players > 1 ? `Le toca a ${chName(c, ti.player)}: chute ${ti.k} de ${c.n}.` : `Chute ${ti.k} de ${c.n}.`;
+    }
+    $('#rbGo').hidden = c.done; $('#rbAgain').hidden = !c.done;
+    $('#rbUndo').hidden = !c.turns.length;
+    $('#rbQuit').textContent = c.done ? 'Nuevo reto' : 'Terminar el reto';
+  }
+  function renderRtSetup() {
+    const r = settings.rt;
+    document.querySelectorAll('#rtType [data-t]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.t === r.type)));
+    document.querySelectorAll('#rtPlayers [data-p]').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.p === r.players)));
+    document.querySelectorAll('#rtN [data-n]').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.n === r.n)));
+    $('#rtRange').hidden = r.type !== 'range';
+    $('#rtMin').textContent = r.min; $('#rtMax').textContent = r.max;
+    $('#rtName2').hidden = r.players !== 2;
+    if (document.activeElement !== $('#rtName1')) $('#rtName1').value = r.names[0] || '';
+    if (document.activeElement !== $('#rtName2')) $('#rtName2').value = r.names[1] || '';
+  }
+  function renderRtPast() {
+    const ul = $('#rtPast');
+    ul.innerHTML = CH.past.length ? CH.past.slice(0, 10).map((x) => `<li>${escapeHtml(x.title)}<small>${new Date(x.at).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}. ${escapeHtml(x.summary)}</small></li>`).join('') : '<li class="empty">Todavía no has terminado ninguno.</li>';
+  }
+  function renderChalStrip() {
+    const el = $('#chalStrip'), c = CH.active;
+    const show = !!c && !c.done && !!(S.t && S.t.connected) && screen === 'kick';
+    el.hidden = !show;
+    if (scene.captionOff !== show) { scene.captionOff = show; if (screen === 'kick') scene.draw(); }
+    if (!show) return;
+    const ti = chTurnInfo(c);
+    const who = c.players > 1 ? `Turno de <b>${escapeHtml(chName(c, ti.player))}</b>, chute ${ti.k} de ${c.n}` : `Reto: chute <b>${ti.k} de ${c.n}</b>`;
+    const goal = c.type === 'range' ? `, de ${c.min} a ${c.max} km/h` : '';
+    el.innerHTML = `<span>${who}${goal}</span><button class="go" data-go="retos">Marcador</button>`;
+  }
+
   // ------------------------------------------------------------ eventos
   function bind() {
     $('#btnMain').onclick = () => act($('#btnMain').dataset.act);
     $('#btnAlt').onclick = () => act($('#btnAlt').dataset.act);
     $('#btnDisc').onclick = disconnect;
     $('#btnCam').onclick = toggleCam;
+    $('#tabs').onclick = (e) => { const b = e.target.closest('[data-scr]'); if (b) showScreen(b.dataset.scr); };
+    $('#footSel').onclick = (e) => { const b = e.target.closest('[data-foot]'); if (!b) return; settings.foot = b.dataset.foot; saveSettings(); renderFootSel(); };
+    $('#chalStrip').onclick = (e) => { if (e.target.closest('[data-go]')) showScreen('retos'); };
+    $('#resFoot').onclick = () => {
+      const k = kicks.find((x) => x.id === S.current); if (!k) return;
+      k.foot = k.foot == null ? 'left' : k.foot === 'left' ? 'right' : null;
+      storeKicks(kicks); renderResult(k, S.currentRes, false); renderHistory();
+    };
+    $('#resFav').onclick = () => { const k = kicks.find((x) => x.id === S.current); if (!k) return; k.fav = !k.fav; storeKicks(kicks); renderResMeta(k, S.currentRes); renderHistory(); };
+    $('#rtabs').onclick = (e) => { const b = e.target.closest('[data-rp]'); if (b) showRtab(b.dataset.rp); };
+    // evolución
+    $('#evoMetric').onclick = (e) => { const b = e.target.closest('[data-m]'); if (!b) return; settings.evoMetric = b.dataset.m; saveSettings(); renderEvo(); };
+    $('#evoFoot').onclick = (e) => { const b = e.target.closest('[data-f]'); if (!b) return; settings.evoFoot = b.dataset.f; saveSettings(); renderEvo(); };
+    const evoAt = (e) => { const g = EV.geom; if (!g) return; const r = $('#evoChart').getBoundingClientRect(); evoPick(Math.floor((e.clientX - r.left - g.padL) / g.bw)); };
+    $('#evoChart').addEventListener('pointerdown', evoAt);
+    $('#evoChart').addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' || e.buttons) evoAt(e); });
+    $('#evoChart').addEventListener('keydown', (e) => {
+      if (!EV.data || !EV.geom) return;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); evoPick((EV.sel == null ? EV.data.weeks.length - 1 : EV.sel) + (e.key === 'ArrowLeft' ? -1 : 1)); }
+    });
+    // retos
+    $('#rtType').onclick = (e) => { const b = e.target.closest('[data-t]'); if (!b) return; settings.rt.type = b.dataset.t; saveSettings(); renderRtSetup(); };
+    $('#rtPlayers').onclick = (e) => { const b = e.target.closest('[data-p]'); if (!b) return; settings.rt.players = +b.dataset.p; saveSettings(); renderRtSetup(); };
+    $('#rtN').onclick = (e) => { const b = e.target.closest('[data-n]'); if (!b) return; settings.rt.n = +b.dataset.n; saveSettings(); renderRtSetup(); };
+    $('#rtRange').onclick = (e) => {
+      const b = e.target.closest('[data-step]'); if (!b) return;
+      const [k, d] = b.dataset.step.split(':'), r = settings.rt;
+      if (k === 'min') r.min = Math.max(10, Math.min(r.max - 5, r.min + +d)); else r.max = Math.min(160, Math.max(r.min + 5, r.max + +d));
+      saveSettings(); renderRtSetup();
+    };
+    for (const [id, i] of [['#rtName1', 0], ['#rtName2', 1]]) $(id).oninput = () => { settings.rt.names[i] = $(id).value; saveSettings(); };
+    $('#rtStart').onclick = () => {
+      chStart(settings.rt);
+      const c = CH.active;
+      toast(c.players > 1 ? `Reto en marcha. Empieza ${chName(c, 0)}.` : 'Reto en marcha.');
+      showScreen('kick');
+    };
+    $('#rbGo').onclick = () => showScreen('kick');
+    $('#rbUndo').onclick = chUndo;
+    $('#rbQuit').onclick = chQuit;
+    $('#rbAgain').onclick = () => { const c = CH.active; if (!c) return; chStart(c); showScreen('kick'); };
     $('#views').onclick = (e) => {
       const b = e.target.closest('button'); if (!b) return;
       P.touched = false;
@@ -1154,19 +1558,19 @@
     };
     $('#history').onclick = async (e) => {
       const fav = e.target.closest('[data-fav]');
-      if (fav) { const k = kicks.find((x) => x.id === +fav.dataset.fav); if (k) { k.fav = !k.fav; storeKicks(kicks); renderHistory(); } return; }
+      if (fav) { const k = kicks.find((x) => x.id === +fav.dataset.fav); if (k) { k.fav = !k.fav; storeKicks(kicks); renderHistory(); if (k.id === S.current) renderResMeta(k, S.currentRes); } return; }
       const del = e.target.closest('[data-del]');
       if (del) {
         const id = +del.dataset.del, k = kicks.find((x) => x.id === id);
         if (k && k.video) await SBVideo.ClipStore.del(id);
         kicks = kicks.filter((x) => x.id !== id); storeKicks(kicks);
         if (S.current === id) { S.current = null; S.currentRes = null; S.fl = null; scene.setFlight(null); unloadClip(); $('#result').hidden = true; refreshStage(); }
-        renderHistory(); renderUsage(); renderDock(); return;
+        renderHistory(); renderUsage(); renderDock(); renderEvo(); return;
       }
       const li = e.target.closest('li[data-id]'); if (!li) return;
       const k = kicks.find((x) => x.id === +li.dataset.id); if (!k) return;
+      showScreen('kick');
       renderResult(k, null, true); renderHistory();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     };
     $('#tag').onchange = () => { const k = kicks.find((x) => x.id === S.current); if (k) { k.tag = $('#tag').value.trim(); storeKicks(kicks); renderHistory(); } };
     document.querySelectorAll('.chips button').forEach((ch) => { ch.onclick = () => { const t = $('#tag'); t.value = (t.value ? t.value + ', ' : '') + ch.textContent; t.onchange(); }; });
@@ -1193,7 +1597,7 @@
     $('#diag').addEventListener('toggle', () => { if ($('#diag').open) $('#log').textContent = logLines.slice(-400).join('\n'); });
     window.addEventListener('pagehide', () => { if (S.t && S.t.connected && !S.t.isDemo) { try { S.t.write('CMD', SB.CMD.RESET); } catch (e) { /* nada */ } } S.cam.close(); });
     let rz = 0;
-    window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { scene.draw(); spinBall.draw(); if (S.currentRes && S.currentRes.ok) SBScene.drawStrike($('#strikeCanvas'), strikeOf(S.currentRes)); }, 120); });
+    window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (screen === 'kick') { scene.draw(); redrawPanels(); } else if (screen === 'hist') drawEvo(); }, 120); });
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => scene.draw()).catch(() => {});
   }
 
@@ -1213,13 +1617,25 @@
     bind();
     checkSupport();
     const ver = $('#ver'); if (ver) ver.textContent = VERSION;
+    showScreen('kick');
     setState('disconnected');
     renderHistory(); renderUsage();
     if (kicks.length) renderResult(kicks[0], null, false);
-    renderHistory();
+    renderHistory(); chRefresh(); renderFootSel();
+    watchMinibar();
     log('App Smart Ball ' + VERSION + ' · ' + navigator.userAgent);
     setTimeout(refreshOldResults, 400);
-    window.SmartBallApp = { S, P, act, scene, settings, kicks: () => kicks, current: () => ({ kick: kicks.find((x) => x.id === S.current) || null, res: S.currentRes }), analyzeKick };
+    window.SmartBallApp = { S, P, act, scene, settings, showScreen, CH, kicks: () => kicks, current: () => ({ kick: kicks.find((x) => x.id === S.current) || null, res: S.currentRes }), analyzeKick };
+  }
+  // los números principales se quedan arriba al bajar por el detalle
+  function watchMinibar() {
+    const mb = $('#minibar'), target = $('#nums'), root = $('#screens');
+    if (!mb || !target || typeof IntersectionObserver !== 'function') return;
+    const io = new IntersectionObserver((ents) => {
+      const e = ents[ents.length - 1], above = e.boundingClientRect.bottom < (e.rootBounds ? e.rootBounds.top : 0) + 4;
+      mb.classList.toggle('on', !e.isIntersecting && above && screen === 'kick' && !heroMode() && !!(S.currentRes && S.currentRes.ok));
+    }, { root, threshold: 0 });
+    io.observe(target);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
