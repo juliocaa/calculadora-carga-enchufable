@@ -1,0 +1,15 @@
+{
+  "name": "Smart Ball",
+  "short_name": "Smart Ball",
+  "description": "App propia para el adidas miCoach Smart Ball (Web Bluetooth)",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1b2e",
+  "theme_color": "#0b1b2e",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
