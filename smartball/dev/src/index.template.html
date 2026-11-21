@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#07301F">
+<title>Smart Ball</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  @font-face { font-family: "Anton"; src: url("fonts/anton-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+  @font-face { font-family: "Atkinson Hyperlegible"; src: url("fonts/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+  @font-face { font-family: "Atkinson Hyperlegible"; src: url("fonts/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+  :root {
+    --cesped: #0A4F36; --cesped-2: #0C5A3D; --hondo: #07301F;
+    --cal: #F4F7F1; --cal-2: rgba(244,247,241,.74); --cal-3: rgba(244,247,241,.26);
+    --tinta: #0A1E16; --amarilla: #FFD60A; --roja: #C92A22; --azul: #2F6FE0;
+    --display: "Anton", "Arial Narrow", Impact, sans-serif;
+    --texto: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --dock: 92px;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--cesped); -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; color: var(--cal); font: 17px/1.45 var(--texto);
+    background: repeating-linear-gradient(180deg, var(--cesped) 0 120px, var(--cesped-2) 120px 240px);
+    padding-bottom: calc(var(--dock) + env(safe-area-inset-bottom, 0px) + 56px);
+  }
+  [hidden] { display: none !important; }
+  h1, h2, h3, p, ul, ol, dl, dd, figure { margin: 0; }
+  ul, ol { padding: 0; list-style: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 3px solid var(--amarilla); outline-offset: 2px; }
+  .app { max-width: 720px; margin: 0 auto; }
+
+  /* cabecera */
+  .top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 16px 10px; }
+  .top h1 { font: 400 24px/1 var(--display); letter-spacing: .02em; white-space: nowrap; flex: none; }
+  .conn { font-size: 14px; color: var(--cal-2); text-align: right; }
+  .conn .link { font-size: 14px; padding: 0; margin-left: 6px; color: var(--cal); }
+  .notice { margin: 0 16px 12px; padding: 10px 12px; border: 1.5px solid var(--cal); font-size: 15px; }
+
+  /* escena */
+  .stage { position: relative; background: var(--hondo); border-block: 2px solid var(--cal); aspect-ratio: 16 / 10.5; max-height: 54vh; width: 100%; overflow: hidden; }
+  .stage canvas, .stage video { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .stage video { object-fit: cover; background: #000; }
+  .banner { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 14px; background: rgba(7,48,31,.86); }
+  .banner .state { font: 400 34px/1.05 var(--display); letter-spacing: .01em; }
+  .banner .hint { margin-top: 4px; font-size: 15px; color: var(--cal-2); min-height: 1.2em; }
+  .banner.go { background: var(--amarilla); color: var(--tinta); }
+  .banner.go .state { font-size: 52px; }
+  .banner.go .hint { color: var(--tinta); }
+  .banner.wait .state { animation: latido 1.3s ease-in-out infinite; }
+  .banner.bad { background: var(--roja); }
+  .banner.bad .hint { color: var(--cal); }
+  @keyframes latido { 50% { opacity: .45; } }
+  .chalkbar { height: 4px; margin-top: 10px; background: var(--cal-3); }
+  .chalkbar i { display: block; height: 100%; width: 0; background: var(--cal); transition: width .15s linear; }
+  .views { display: flex; gap: 6px; align-items: center; padding: 10px 16px 0; }
+  .views button { font-size: 14px; padding: 8px 11px; border: 1.5px solid var(--cal-3); white-space: nowrap; }
+  .views button[aria-pressed="true"] { background: var(--cal); color: var(--tinta); border-color: var(--cal); font-weight: 700; }
+  .views .replay { margin-left: auto; border-color: var(--cal); }
+
+  /* resultado */
+  .block { padding: 16px 16px 0; }
+  .kind { font: 400 30px/1.08 var(--display); letter-spacing: .01em; }
+  .quiet { color: var(--cal-2); font-size: 14px; }
+  .nums { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; margin-top: 14px; }
+  .num .n { font: 400 78px/.92 var(--display); letter-spacing: .005em; }
+  .num .u { font-size: 17px; font-weight: 700; margin-left: 5px; }
+  .num .c { display: block; margin-top: 6px; font-size: 14px; color: var(--cal-2); }
+  .reading { margin-top: 14px; font-size: 18px; line-height: 1.4; }
+  .facts3 { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 16px; border-block: 1px solid var(--cal-3); }
+  .facts3 li { padding: 10px 8px 10px 0; }
+  .facts3 li + li { padding-left: 12px; border-left: 1px solid var(--cal-3); }
+  .facts3 b { display: block; font-size: 21px; line-height: 1.15; }
+  .facts3 span { font-size: 13px; color: var(--cal-2); }
+  .ask { margin-top: 14px; padding: 12px; border: 1.5px solid var(--cal); font-size: 15px; }
+  .ask button { margin-top: 8px; }
+  .rule { height: 2px; background: var(--cal); margin: 26px 16px 0; }
+  h3 { font: 700 19px/1.2 var(--texto); margin-bottom: 12px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .pair canvas { width: 100%; aspect-ratio: 1; display: block; }
+  .pair figcaption { font-size: 14px; color: var(--cal-2); margin-top: 2px; }
+  .pair figcaption b { color: var(--cal); display: block; font-size: 15px; }
+  .split { display: grid; grid-template-columns: auto 1fr; margin-top: 14px; border-top: 1px solid var(--cal-3); }
+  .split dt, .split dd { padding: 9px 0; border-bottom: 1px solid var(--cal-3); }
+  .split dt { font-weight: 700; padding-right: 16px; }
+  .split dd { text-align: right; }
+  .split dd small { color: var(--cal-2); font-size: 13px; margin-left: 6px; }
+  .tagc { font-size: 12px; font-weight: 700; padding: 1px 6px; margin-left: 6px; border: 1px solid var(--cal-3); }
+  .tagc.baja { background: var(--roja); border-color: var(--roja); }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .seg button { padding: 8px 12px; border: 1.5px solid var(--cal-3); font-size: 15px; }
+  .seg button[aria-pressed="true"] { background: var(--cal); color: var(--tinta); border-color: var(--cal); font-weight: 700; }
+  .seg .lab { font-size: 15px; color: var(--cal-2); margin-right: 4px; }
+  .lines { margin-top: 12px; }
+  .lines li { padding: 9px 0; border-bottom: 1px solid var(--cal-3); }
+  .lines li:first-child { border-top: 1px solid var(--cal-3); }
+  .lines small { display: block; color: var(--cal-2); font-size: 13px; }
+  .notes { margin-top: 14px; font-size: 14px; color: var(--cal-2); }
+  .notes li { margin-top: 4px; padding-left: 12px; position: relative; }
+  .notes li::before { content: ""; position: absolute; left: 0; top: .62em; width: 5px; height: 5px; background: var(--cal-2); }
+  .notes li.truth { color: var(--amarilla); } .notes li.truth::before { background: var(--amarilla); }
+  .bad { color: var(--cal); background: var(--roja); padding: 10px 12px; }
+
+  /* botones de texto y campos */
+  .btn { display: inline-block; padding: 10px 14px; border: 1.5px solid var(--cal); font-weight: 700; font-size: 15px; }
+  .btn.solid { background: var(--cal); color: var(--tinta); }
+  .btn.warn { border-color: var(--roja); background: var(--roja); }
+  .link { text-decoration: underline; text-underline-offset: 3px; font-size: 15px; padding: 6px 0; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  input[type="text"] { width: 100%; font: inherit; color: var(--cal); background: transparent; border: 1.5px solid var(--cal-3); padding: 10px 12px; border-radius: 0; }
+  input[type="text"]::placeholder { color: var(--cal-2); }
+  input[type="range"] { width: 100%; accent-color: var(--amarilla); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chips button { font-size: 14px; padding: 6px 10px; border: 1px solid var(--cal-3); }
+  label.check { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 16px; }
+  label.check input { width: 20px; height: 20px; accent-color: var(--amarilla); flex: none; }
+  label.check small { display: block; color: var(--cal-2); font-size: 13px; }
+
+  /* vídeo */
+  .clipwrap { position: relative; background: #000; border: 2px solid var(--cal); width: 100%; aspect-ratio: 16 / 9; max-height: 70vh; overflow: hidden; touch-action: manipulation; }
+  .clipwrap video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .clipwrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .clipwrap .mark { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 2.5px solid var(--amarilla); border-radius: 50%; pointer-events: none; }
+  .clipwrap .stat { position: absolute; left: 8px; top: 8px; font-size: 13px; background: rgba(7,48,31,.8); padding: 3px 7px; pointer-events: none; }
+  .transport { display: grid; grid-template-columns: 1fr 1.6fr 1fr 1.3fr 1fr; gap: 6px; margin-top: 8px; }
+  .transport button { padding: 11px 4px; border: 1.5px solid var(--cal); font-weight: 700; font-size: 15px; }
+  .transport button.solid { background: var(--cal); color: var(--tinta); }
+  .cliphint { margin-top: 8px; font-size: 15px; background: var(--amarilla); color: var(--tinta); padding: 8px 10px; }
+
+  /* historial */
+  .marks { display: grid; grid-template-columns: repeat(3, 1fr); border-block: 1px solid var(--cal-3); margin-bottom: 14px; }
+  .marks li { padding: 10px 8px 10px 0; }
+  .marks li + li { padding-left: 12px; border-left: 1px solid var(--cal-3); }
+  .marks b { display: block; font: 400 30px/1 var(--display); }
+  .marks span { font-size: 13px; color: var(--cal-2); }
+  #history li { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--cal-3); cursor: pointer; }
+  #history li:first-child { border-top: 1px solid var(--cal-3); }
+  #history li.sel { box-shadow: inset 4px 0 0 var(--amarilla); padding-left: 12px; }
+  #history li.empty { display: block; color: var(--cal-2); cursor: default; }
+  #history .h2 { font-size: 16px; } #history .h2 b { font-weight: 700; }
+  #history .h1 { font-size: 13px; color: var(--cal-2); grid-column: 1; }
+  #history .ico { font-size: 20px; padding: 6px 8px; color: var(--cal-2); line-height: 1; }
+  #history .ico.on { color: var(--amarilla); }
+  .confirm { margin-top: 10px; padding: 12px; background: var(--roja); }
+
+  /* plegables */
+  details { margin: 0 16px; border-bottom: 1px solid var(--cal-3); }
+  details:first-of-type { border-top: 2px solid var(--cal); margin-top: 26px; }
+  summary { padding: 14px 0; font-weight: 700; cursor: pointer; }
+  details > div { padding-bottom: 16px; }
+  details ol { counter-reset: paso; }
+  details ol li { counter-increment: paso; position: relative; padding: 0 0 10px 30px; }
+  details ol li::before { content: counter(paso); position: absolute; left: 0; top: 0; font: 400 20px/1.2 var(--display); }
+  #log { background: var(--hondo); color: var(--cal-2); font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; padding: 10px; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-all; margin: 10px 0 0; }
+  .ver { text-align: center; padding: 18px 16px 0; }
+
+  /* barra de acción */
+  .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--hondo); border-top: 2px solid var(--cal); padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .dock .in { max-width: 720px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto; gap: 8px 10px; align-items: center; }
+  .main { font: 400 clamp(18px, 5.6vw, 24px)/1 var(--display); letter-spacing: .02em; padding: 16px 10px 15px; min-height: 55px; background: var(--amarilla); color: var(--tinta); text-align: center; }
+  .main.stop { background: transparent; color: var(--cal); box-shadow: inset 0 0 0 2px var(--cal); }
+  .main:disabled { background: transparent; color: var(--cal-2); box-shadow: inset 0 0 0 2px var(--cal-3); cursor: default; }
+  .main:active:not(:disabled) { transform: translateY(1px); }
+  .cam { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 10px; font-size: 13px; color: var(--cal-2); box-shadow: inset 0 0 0 1.5px var(--cal-3); min-width: 64px; }
+  .cam svg { width: 26px; height: 26px; }
+  .cam[aria-pressed="true"] { color: var(--tinta); background: var(--cal); box-shadow: none; font-weight: 700; }
+  .alt { grid-column: 1 / -1; justify-self: center; }
+  #toast { position: fixed; left: 12px; right: 12px; bottom: calc(var(--dock) + env(safe-area-inset-bottom, 0px) + 8px); max-width: 696px; margin: 0 auto; z-index: 6; background: var(--cal); color: var(--tinta); padding: 12px 14px; font-size: 15px; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+  @media (max-width: 370px) { .num .n { font-size: 66px; } .kind { font-size: 27px; } .banner.go .state { font-size: 44px; } }
+  @media (prefers-reduced-motion: reduce) { .banner.wait .state { animation: none; } .chalkbar i { transition: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>Smart Ball</h1>
+    <p class="conn"><span id="conn">Sin balón</span> <button class="link" id="btnDisc" hidden>Desconectar</button></p>
+  </header>
+  <p class="notice" id="support" hidden></p>
+
+  <section class="stage" id="stage" aria-label="Campo y trayectoria">
+    <canvas id="scene"></canvas>
+    <video id="preview" playsinline muted hidden></video>
+    <div class="banner" id="banner" role="status" aria-live="polite">
+      <div class="state" id="statusText"></div>
+      <div class="hint" id="statusSub"></div>
+      <div class="chalkbar" id="progress" hidden><i id="progressBar"></i></div>
+    </div>
+  </section>
+  <div class="views" id="views" hidden>
+    <button data-view="behind" aria-pressed="true">Perspectiva</button>
+    <button data-view="side" aria-pressed="false">Lateral</button>
+    <button data-view="top" aria-pressed="false">Arriba</button>
+    <button class="replay" id="btnReplay">Repetir</button>
+  </div>
+
+  <section id="result" hidden>
+    <div class="block">
+      <h2 class="kind" id="resType"></h2>
+      <p class="quiet" id="resWhen"></p>
+      <div id="resBody">
+        <div class="nums">
+          <div class="num"><span class="n" id="nSpeed"></span><span class="u">km/h</span><span class="c">velocidad de salida, estimada</span></div>
+          <div class="num"><span class="n" id="nSpin"></span><span class="u">rpm</span><span class="c" id="cSpin"></span></div>
+        </div>
+        <p class="reading" id="resReading"></p>
+        <ul class="facts3" id="flightFacts"></ul>
+        <p class="quiet" id="flightNote" style="margin-top:8px"></p>
+        <div class="ask" id="landAsk" hidden></div>
+      </div>
+      <p class="bad" id="resBad" hidden></p>
+    </div>
+
+    <div id="clipBlock" hidden>
+      <div class="rule"></div>
+      <div class="block">
+        <h3>El chute en vídeo</h3>
+        <div class="clipwrap" id="clipWrap">
+          <video id="clipVideo" playsinline preload="auto"></video>
+          <canvas id="clipOver" aria-hidden="true"></canvas>
+          <div class="mark" id="mark0" hidden></div><div class="mark" id="mark1" hidden></div>
+          <div class="stat" id="clipStat"></div>
+        </div>
+        <p class="cliphint" id="clipHint" hidden></p>
+        <p class="quiet" id="clipNote" style="margin-top:8px" hidden>La línea amarilla es la trayectoria que calculó el balón, colocada sobre el vídeo con tus dos toques. Si el aro acompaña al balón, el cálculo va bien.</p>
+        <input type="range" id="vSeek" min="0" max="1000" value="0" aria-label="Posición del vídeo" style="margin-top:8px">
+        <div class="transport">
+          <button id="vBack" aria-label="Fotograma anterior">‹</button>
+          <button id="vPlay" class="solid">Ver</button>
+          <button id="vFwd" aria-label="Fotograma siguiente">›</button>
+          <button id="vKick">Golpeo</button>
+          <button id="vRate" aria-label="Velocidad de reproducción">¼×</button>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="link" id="vMeasure">Medir el ángulo de salida</button>
+          <button class="link" id="vSetKick">Fijar el golpeo aquí</button>
+          <button class="link" id="vShare">Compartir vídeo</button>
+          <button class="link" id="vDelete">Borrar vídeo</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="detailBlock">
+      <div class="rule"></div>
+      <div class="block">
+        <h3>Cómo giraba y dónde le diste</h3>
+        <div class="pair">
+          <figure><canvas id="spinCanvas"></canvas><figcaption id="spinCap"></figcaption></figure>
+          <figure><canvas id="strikeCanvas"></canvas><figcaption id="strikeCap"></figcaption></figure>
+        </div>
+        <dl class="split" id="split"></dl>
+      </div>
+
+      <div class="rule"></div>
+      <div class="block">
+        <h3>Si fuera una falta</h3>
+        <div class="seg" id="distSeg" role="group" aria-label="Distancia a la portería">
+          <span class="lab">Portería a</span>
+          <button data-d="16" aria-pressed="false">16 m</button><button data-d="20" aria-pressed="true">20 m</button><button data-d="25" aria-pressed="false">25 m</button><button data-d="30" aria-pressed="false">30 m</button>
+        </div>
+        <label class="check"><input type="checkbox" id="set_wall"> Barrera a 9,15 m</label>
+        <ul class="lines" id="fkFacts"></ul>
+      </div>
+    </div>
+
+    <div class="block">
+      <ul class="notes" id="resNotes"></ul>
+      <div style="margin-top:16px">
+        <input type="text" id="tag" placeholder="Etiqueta: interior, empeine, barrera…" maxlength="80" aria-label="Etiqueta del chute">
+        <div class="chips"><button>Interior</button><button>Empeine</button><button>Exterior</button><button>Pierna izquierda</button><button>Pierna derecha</button></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="rule"></div>
+  <section class="block">
+    <h3>Chutes guardados <span class="quiet" id="histCount"></span></h3>
+    <ul class="marks" id="marks" hidden></ul>
+    <ul id="history"></ul>
+    <div class="row" style="margin-top:14px">
+      <button class="btn" id="btnShare">Compartir datos</button>
+      <button class="btn" id="btnCsv">Excel (CSV)</button>
+      <button class="btn" id="btnJson">Datos completos</button>
+      <button class="btn" id="btnImport">Importar</button>
+      <button class="btn warn" id="btnClear">Borrar todo</button>
+    </div>
+    <div class="confirm" id="confirmClear" hidden>¿Borrar todos los chutes y vídeos de este móvil? No se puede deshacer.
+      <div class="row" style="margin-top:10px"><button class="btn solid" id="btnClearYes">Sí, borrar</button><button class="btn" id="btnClearNo">No</button></div>
+    </div>
+    <input type="file" id="fileIn" accept=".json,application/json" hidden>
+  </section>
+
+  <details>
+    <summary>Cómo se usa</summary>
+    <div>
+      <ol>
+        <li><b>Carga.</b> Pon el balón en su base alineando los dibujos. Luz verde con parpadeo largo: está cargando. Parpadeo rápido: mal alineado. Luces apagadas: cargado (tarda una hora).</li>
+        <li><b>Conecta.</b> En Google Chrome, con Bluetooth y Ubicación activados, pulsa «Conectar balón» y elige el que empieza por DB.</li>
+        <li><b>Coloca.</b> Balón en el suelo con el logo hacia arriba y las flechas apuntando al objetivo, siempre igual. Así lo pedía la app original.</li>
+        <li><b>Chuta.</b> Pulsa «Preparar chute», no lo toques hasta el silbato y chuta. Tiene que subir al menos 1 m y recorrer 10 m sin botar ni rodar.</li>
+        <li><b>Recoge el balón.</b> Si se aleja más de unos 10 m se corta la conexión; el chute queda guardado dentro y se descarga solo al acercarlo al móvil.</li>
+      </ol>
+      <p><b>Vídeo.</b> Activa «Vídeo» y apoya el móvil en un trípode. Graba solo unos segundos antes y después de cada chute, y lo puedes ver a cámara lenta, fotograma a fotograma. Si lo grabas de lado (perpendicular al tiro y con el móvil derecho), «Medir el ángulo de salida» fija la altura de la trayectoria y la dibuja encima del vídeo.</p>
+      <p style="margin-top:10px"><b>Qué es medido y qué es estimado.</b> El giro en rpm y la inclinación del eje salen directamente del sensor. La velocidad, el reparto liftado, rosca y bala, y el efecto del giro en la trayectoria se calculan con un modelo aerodinámico. El ángulo de salida es lo menos seguro con el balón solo: lo fijan el primer bote, si entra en el segundo que graba el balón, o el vídeo.</p>
+    </div>
+  </details>
+  <details>
+    <summary>Ajustes</summary>
+    <div>
+      <label class="check"><input type="checkbox" id="set_openField"><span>Campo abierto<small>El balón bota en el suelo antes de tocar red, pared o persona: uso el primer bote para afinar la trayectoria.</small></span></label>
+      <label class="check"><input type="checkbox" id="set_sound"> Silbato y pitidos</label>
+      <label class="check"><input type="checkbox" id="set_speak"> Leer el resultado en voz alta</label>
+      <label class="check"><input type="checkbox" id="set_vibrate"> Vibración</label>
+      <label class="check"><input type="checkbox" id="set_camAudio"><span>Grabar el sonido<small>El chasquido del golpeo sincroniza el vídeo con los datos.</small></span></label>
+      <label class="check"><input type="checkbox" id="set_cam60"><span>Vídeo a 60 imágenes por segundo<small>Si el móvil lo permite. Ocupa más.</small></span></label>
+      <p class="quiet" id="clipUsage" style="margin-top:8px"></p>
+    </div>
+  </details>
+  <details id="diag">
+    <summary>Diagnóstico</summary>
+    <div>
+      <p class="quiet">Si algo falla, pulsa «Copiar registro» y pégamelo.</p>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="btnCopyLog">Copiar registro</button>
+        <button class="btn" id="btnReadStatus">Leer estado</button>
+        <button class="btn" id="btnAnyDevice">Buscar cualquier dispositivo</button>
+        <button class="btn" id="btnRate">Fijar muestreo 1 ms</button>
+        <button class="btn" id="btnForce">Descargar lo que tenga el balón</button>
+      </div>
+      <pre id="log"></pre>
+    </div>
+  </details>
+  <p class="quiet ver">Smart Ball, versión <span id="ver"></span>. Proyecto personal sin relación con adidas.</p>
+</div>
+
+<div class="dock">
+  <div class="in">
+    <button class="main" id="btnMain">Conectar balón</button>
+    <button class="cam" id="btnCam" aria-pressed="false" aria-label="Grabar vídeo de cada chute">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2.5" y="6.5" width="13" height="11"/><path d="M15.5 10.5l6-3v9l-6-3z"/></svg>
+      Vídeo
+    </button>
+    <button class="link alt" id="btnAlt" hidden></button>
+  </div>
+</div>
+<div id="toast" role="status" hidden></div>
+<script>
+/*__SBCORE__*/
+</script>
+<script>
+/*__SCENE__*/
+</script>
+<script>
+/*__VIDEO__*/
+</script>
+<script>
+/*__APP__*/
+</script>
+<script>
+  try {
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      var hadController = !!navigator.serviceWorker.controller, reloaded = false;
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+      // Si llega una versión nueva mientras no hay balón conectado, se recarga sola.
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (!hadController || reloaded) return;
+        var app = window.SmartBallApp;
+        if (app && app.S && app.S.state !== 'disconnected') return;
+        reloaded = true; location.reload();
+      });
+    }
+  } catch (e) {}
+</script>
+</body>
+</html>

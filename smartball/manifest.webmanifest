@@ -1,14 +1,14 @@
 {
   "name": "Smart Ball",
   "short_name": "Smart Ball",
-  "description": "App propia para el adidas miCoach Smart Ball (Web Bluetooth)",
+  "description": "App propia para el adidas miCoach Smart Ball: giro, trayectoria y vídeo de cada chute",
   "lang": "es",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0b1b2e",
-  "theme_color": "#0b1b2e",
+  "background_color": "#0A4F36",
+  "theme_color": "#07301F",
   "icons": [
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]

@@ -3,172 +3,350 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0b1b2e">
+<meta name="theme-color" content="#07301F">
 <title>Smart Ball</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <style>
-  :root { --ink:#16202c; --mute:#5b6b7f; --line:#dde3ea; --bg:#eef2f6; --card:#fff; --blue:#0b5cd6; --green:#0e9f5a; --amber:#c77700; --red:#c93c3c; }
+  @font-face { font-family: "Anton"; src: url("fonts/anton-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+  @font-face { font-family: "Atkinson Hyperlegible"; src: url("fonts/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+  @font-face { font-family: "Atkinson Hyperlegible"; src: url("fonts/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+  :root {
+    --cesped: #0A4F36; --cesped-2: #0C5A3D; --hondo: #07301F;
+    --cal: #F4F7F1; --cal-2: rgba(244,247,241,.74); --cal-3: rgba(244,247,241,.26);
+    --tinta: #0A1E16; --amarilla: #FFD60A; --roja: #C92A22; --azul: #2F6FE0;
+    --display: "Anton", "Arial Narrow", Impact, sans-serif;
+    --texto: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --dock: 92px;
+  }
   * { box-sizing: border-box; }
-  html, body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-text-size-adjust:100%; }
-  header { background:#0b1b2e; color:#fff; padding:14px 16px 12px; }
-  header h1 { margin:0; font-size:20px; letter-spacing:.2px; }
-  header p { margin:2px 0 0; color:#a9b8cc; font-size:13px; }
-  main { max-width:720px; margin:0 auto; padding:12px; }
-  .card { background:var(--card); border-radius:14px; padding:14px; margin-bottom:12px; box-shadow:0 1px 2px rgba(16,32,48,.06); }
-  .status { border-radius:12px; padding:18px 14px; text-align:center; border:2px solid var(--line); background:#f7f9fb; transition:background .2s, border-color .2s; }
-  .status .t { font-size:26px; font-weight:750; }
-  .status .s { color:var(--mute); margin-top:4px; min-height:1.4em; }
-  .status.on { border-color:#b9d3f7; background:#f2f7ff; }
-  .status.busy .t { color:var(--blue); }
-  .status.wait { border-color:#f0d08a; background:#fff8e8; }
-  .status.wait .t { color:var(--amber); animation: pulse 1.2s ease-in-out infinite; }
-  .status.ready { border-color:var(--green); background:#e6f7ee; }
-  .status.ready .t { color:var(--green); font-size:34px; }
-  .status.warn { border-color:#f3b4b4; background:#fff2f2; }
-  .status.warn .t { color:var(--red); }
-  @keyframes pulse { 50% { opacity:.45; } }
-  .progress { height:8px; background:#e3e8ef; border-radius:6px; overflow:hidden; margin-top:10px; }
-  .progress > div { height:100%; width:0; background:var(--blue); transition:width .15s; }
-  .info { color:var(--mute); font-size:13px; text-align:center; margin-top:8px; }
-  .btns { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
-  button { font:inherit; border:0; border-radius:12px; padding:14px 16px; background:var(--blue); color:#fff; font-weight:650; cursor:pointer; }
-  button.big { font-size:19px; padding:18px; }
-  button.sec { background:#e8eef6; color:var(--ink); font-weight:600; }
-  button.ghost { background:transparent; color:var(--blue); padding:8px; font-weight:600; }
-  button.danger { background:#fbe9e9; color:var(--red); }
-  button:active { transform:scale(.99); }
-  .row { display:flex; gap:8px; flex-wrap:wrap; }
-  .row > button { flex:1 1 140px; }
-  h2 { font-size:17px; margin:0 0 8px; }
-  .muted { color:var(--mute); font-size:13px; }
-  .restop { display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap; }
-  .badge { display:inline-block; background:#0b1b2e; color:#fff; border-radius:999px; padding:4px 10px; font-size:14px; font-weight:650; margin:6px 0 10px; }
-  .grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
-  .cell { border:1px solid var(--line); border-radius:10px; padding:8px 10px; }
-  .cell .k { font-size:12px; color:var(--mute); }
-  .cell .v { font-size:24px; font-weight:750; line-height:1.15; }
-  .cell .v small { font-size:13px; font-weight:600; color:var(--mute); }
-  .cell .s { font-size:12px; color:var(--mute); }
-  .conf { border-radius:6px; padding:0 5px; font-size:11px; font-weight:700; }
-  .conf.alta { background:#e3f5ea; color:#0b7a45; } .conf.media { background:#fff3d6; color:#8a5a00; } .conf.baja { background:#fde6e6; color:#a52b2b; }
-  .bad { color:var(--red); }
-  #resNotes ul { margin:10px 0 0; padding-left:18px; color:var(--mute); font-size:13px; }
-  #resNotes li.truth { color:#0b5cd6; }
-  canvas { width:100%; display:block; margin-top:10px; }
-  #spinCanvas { height:210px; } #plotCanvas { height:170px; }
-  .tagrow { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
-  .tagrow input { flex:1 1 100%; font:inherit; padding:10px 12px; border:1px solid var(--line); border-radius:10px; }
-  .chip { background:#eef3f9; color:var(--ink); padding:6px 10px; border-radius:999px; font-size:13px; font-weight:600; }
-  #history { list-style:none; margin:0; padding:0; }
-  #history li { position:relative; border-top:1px solid var(--line); padding:9px 34px 9px 2px; cursor:pointer; }
-  #history li.sel { background:#f2f7ff; }
-  #history li.empty { color:var(--mute); cursor:default; }
-  #history .h1 { font-size:12px; color:var(--mute); } #history .h2 { font-size:15px; } #history .h3 { font-size:13px; color:var(--mute); }
-  #history .del { position:absolute; right:0; top:8px; background:transparent; color:#9aa7b8; padding:6px 8px; font-size:16px; }
-  details { background:var(--card); border-radius:14px; padding:12px 14px; margin-bottom:12px; }
-  summary { font-weight:700; cursor:pointer; }
-  details ol, details ul { padding-left:20px; margin:8px 0; } details li { margin:4px 0; }
-  #log { background:#0e1622; color:#cfe1f7; font:12px/1.35 ui-monospace, Menlo, Consolas, monospace; padding:10px; border-radius:10px; max-height:320px; overflow:auto; white-space:pre-wrap; word-break:break-all; }
-  .toggles label { display:flex; align-items:center; gap:10px; padding:6px 0; }
-  .toggles input { width:20px; height:20px; }
-  #toast { position:fixed; left:12px; right:12px; bottom:14px; max-width:696px; margin:0 auto; background:#16202c; color:#fff; padding:12px 14px; border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,.25); z-index:10; }
-  #support { background:#fff3d6; color:#6b4500; border-radius:12px; padding:10px 12px; margin-bottom:12px; font-size:14px; }
-  .confirm { background:#fff2f2; border-radius:10px; padding:10px; margin-top:8px; }
-  [hidden] { display:none !important; }
-  @media (max-width:380px) { .cell .v { font-size:21px; } }
+  html { background: var(--cesped); -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; color: var(--cal); font: 17px/1.45 var(--texto);
+    background: repeating-linear-gradient(180deg, var(--cesped) 0 120px, var(--cesped-2) 120px 240px);
+    padding-bottom: calc(var(--dock) + env(safe-area-inset-bottom, 0px) + 56px);
+  }
+  [hidden] { display: none !important; }
+  h1, h2, h3, p, ul, ol, dl, dd, figure { margin: 0; }
+  ul, ol { padding: 0; list-style: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 3px solid var(--amarilla); outline-offset: 2px; }
+  .app { max-width: 720px; margin: 0 auto; }
+
+  /* cabecera */
+  .top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 16px 10px; }
+  .top h1 { font: 400 24px/1 var(--display); letter-spacing: .02em; white-space: nowrap; flex: none; }
+  .conn { font-size: 14px; color: var(--cal-2); text-align: right; }
+  .conn .link { font-size: 14px; padding: 0; margin-left: 6px; color: var(--cal); }
+  .notice { margin: 0 16px 12px; padding: 10px 12px; border: 1.5px solid var(--cal); font-size: 15px; }
+
+  /* escena */
+  .stage { position: relative; background: var(--hondo); border-block: 2px solid var(--cal); aspect-ratio: 16 / 10.5; max-height: 54vh; width: 100%; overflow: hidden; }
+  .stage canvas, .stage video { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .stage video { object-fit: cover; background: #000; }
+  .banner { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 14px; background: rgba(7,48,31,.86); }
+  .banner .state { font: 400 34px/1.05 var(--display); letter-spacing: .01em; }
+  .banner .hint { margin-top: 4px; font-size: 15px; color: var(--cal-2); min-height: 1.2em; }
+  .banner.go { background: var(--amarilla); color: var(--tinta); }
+  .banner.go .state { font-size: 52px; }
+  .banner.go .hint { color: var(--tinta); }
+  .banner.wait .state { animation: latido 1.3s ease-in-out infinite; }
+  .banner.bad { background: var(--roja); }
+  .banner.bad .hint { color: var(--cal); }
+  @keyframes latido { 50% { opacity: .45; } }
+  .chalkbar { height: 4px; margin-top: 10px; background: var(--cal-3); }
+  .chalkbar i { display: block; height: 100%; width: 0; background: var(--cal); transition: width .15s linear; }
+  .views { display: flex; gap: 6px; align-items: center; padding: 10px 16px 0; }
+  .views button { font-size: 14px; padding: 8px 11px; border: 1.5px solid var(--cal-3); white-space: nowrap; }
+  .views button[aria-pressed="true"] { background: var(--cal); color: var(--tinta); border-color: var(--cal); font-weight: 700; }
+  .views .replay { margin-left: auto; border-color: var(--cal); }
+
+  /* resultado */
+  .block { padding: 16px 16px 0; }
+  .kind { font: 400 30px/1.08 var(--display); letter-spacing: .01em; }
+  .quiet { color: var(--cal-2); font-size: 14px; }
+  .nums { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; margin-top: 14px; }
+  .num .n { font: 400 78px/.92 var(--display); letter-spacing: .005em; }
+  .num .u { font-size: 17px; font-weight: 700; margin-left: 5px; }
+  .num .c { display: block; margin-top: 6px; font-size: 14px; color: var(--cal-2); }
+  .reading { margin-top: 14px; font-size: 18px; line-height: 1.4; }
+  .facts3 { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 16px; border-block: 1px solid var(--cal-3); }
+  .facts3 li { padding: 10px 8px 10px 0; }
+  .facts3 li + li { padding-left: 12px; border-left: 1px solid var(--cal-3); }
+  .facts3 b { display: block; font-size: 21px; line-height: 1.15; }
+  .facts3 span { font-size: 13px; color: var(--cal-2); }
+  .ask { margin-top: 14px; padding: 12px; border: 1.5px solid var(--cal); font-size: 15px; }
+  .ask button { margin-top: 8px; }
+  .rule { height: 2px; background: var(--cal); margin: 26px 16px 0; }
+  h3 { font: 700 19px/1.2 var(--texto); margin-bottom: 12px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .pair canvas { width: 100%; aspect-ratio: 1; display: block; }
+  .pair figcaption { font-size: 14px; color: var(--cal-2); margin-top: 2px; }
+  .pair figcaption b { color: var(--cal); display: block; font-size: 15px; }
+  .split { display: grid; grid-template-columns: auto 1fr; margin-top: 14px; border-top: 1px solid var(--cal-3); }
+  .split dt, .split dd { padding: 9px 0; border-bottom: 1px solid var(--cal-3); }
+  .split dt { font-weight: 700; padding-right: 16px; }
+  .split dd { text-align: right; }
+  .split dd small { color: var(--cal-2); font-size: 13px; margin-left: 6px; }
+  .tagc { font-size: 12px; font-weight: 700; padding: 1px 6px; margin-left: 6px; border: 1px solid var(--cal-3); }
+  .tagc.baja { background: var(--roja); border-color: var(--roja); }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .seg button { padding: 8px 12px; border: 1.5px solid var(--cal-3); font-size: 15px; }
+  .seg button[aria-pressed="true"] { background: var(--cal); color: var(--tinta); border-color: var(--cal); font-weight: 700; }
+  .seg .lab { font-size: 15px; color: var(--cal-2); margin-right: 4px; }
+  .lines { margin-top: 12px; }
+  .lines li { padding: 9px 0; border-bottom: 1px solid var(--cal-3); }
+  .lines li:first-child { border-top: 1px solid var(--cal-3); }
+  .lines small { display: block; color: var(--cal-2); font-size: 13px; }
+  .notes { margin-top: 14px; font-size: 14px; color: var(--cal-2); }
+  .notes li { margin-top: 4px; padding-left: 12px; position: relative; }
+  .notes li::before { content: ""; position: absolute; left: 0; top: .62em; width: 5px; height: 5px; background: var(--cal-2); }
+  .notes li.truth { color: var(--amarilla); } .notes li.truth::before { background: var(--amarilla); }
+  .bad { color: var(--cal); background: var(--roja); padding: 10px 12px; }
+
+  /* botones de texto y campos */
+  .btn { display: inline-block; padding: 10px 14px; border: 1.5px solid var(--cal); font-weight: 700; font-size: 15px; }
+  .btn.solid { background: var(--cal); color: var(--tinta); }
+  .btn.warn { border-color: var(--roja); background: var(--roja); }
+  .link { text-decoration: underline; text-underline-offset: 3px; font-size: 15px; padding: 6px 0; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  input[type="text"] { width: 100%; font: inherit; color: var(--cal); background: transparent; border: 1.5px solid var(--cal-3); padding: 10px 12px; border-radius: 0; }
+  input[type="text"]::placeholder { color: var(--cal-2); }
+  input[type="range"] { width: 100%; accent-color: var(--amarilla); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chips button { font-size: 14px; padding: 6px 10px; border: 1px solid var(--cal-3); }
+  label.check { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 16px; }
+  label.check input { width: 20px; height: 20px; accent-color: var(--amarilla); flex: none; }
+  label.check small { display: block; color: var(--cal-2); font-size: 13px; }
+
+  /* vídeo */
+  .clipwrap { position: relative; background: #000; border: 2px solid var(--cal); width: 100%; aspect-ratio: 16 / 9; max-height: 70vh; overflow: hidden; touch-action: manipulation; }
+  .clipwrap video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .clipwrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .clipwrap .mark { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 2.5px solid var(--amarilla); border-radius: 50%; pointer-events: none; }
+  .clipwrap .stat { position: absolute; left: 8px; top: 8px; font-size: 13px; background: rgba(7,48,31,.8); padding: 3px 7px; pointer-events: none; }
+  .transport { display: grid; grid-template-columns: 1fr 1.6fr 1fr 1.3fr 1fr; gap: 6px; margin-top: 8px; }
+  .transport button { padding: 11px 4px; border: 1.5px solid var(--cal); font-weight: 700; font-size: 15px; }
+  .transport button.solid { background: var(--cal); color: var(--tinta); }
+  .cliphint { margin-top: 8px; font-size: 15px; background: var(--amarilla); color: var(--tinta); padding: 8px 10px; }
+
+  /* historial */
+  .marks { display: grid; grid-template-columns: repeat(3, 1fr); border-block: 1px solid var(--cal-3); margin-bottom: 14px; }
+  .marks li { padding: 10px 8px 10px 0; }
+  .marks li + li { padding-left: 12px; border-left: 1px solid var(--cal-3); }
+  .marks b { display: block; font: 400 30px/1 var(--display); }
+  .marks span { font-size: 13px; color: var(--cal-2); }
+  #history li { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--cal-3); cursor: pointer; }
+  #history li:first-child { border-top: 1px solid var(--cal-3); }
+  #history li.sel { box-shadow: inset 4px 0 0 var(--amarilla); padding-left: 12px; }
+  #history li.empty { display: block; color: var(--cal-2); cursor: default; }
+  #history .h2 { font-size: 16px; } #history .h2 b { font-weight: 700; }
+  #history .h1 { font-size: 13px; color: var(--cal-2); grid-column: 1; }
+  #history .ico { font-size: 20px; padding: 6px 8px; color: var(--cal-2); line-height: 1; }
+  #history .ico.on { color: var(--amarilla); }
+  .confirm { margin-top: 10px; padding: 12px; background: var(--roja); }
+
+  /* plegables */
+  details { margin: 0 16px; border-bottom: 1px solid var(--cal-3); }
+  details:first-of-type { border-top: 2px solid var(--cal); margin-top: 26px; }
+  summary { padding: 14px 0; font-weight: 700; cursor: pointer; }
+  details > div { padding-bottom: 16px; }
+  details ol { counter-reset: paso; }
+  details ol li { counter-increment: paso; position: relative; padding: 0 0 10px 30px; }
+  details ol li::before { content: counter(paso); position: absolute; left: 0; top: 0; font: 400 20px/1.2 var(--display); }
+  #log { background: var(--hondo); color: var(--cal-2); font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; padding: 10px; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-all; margin: 10px 0 0; }
+  .ver { text-align: center; padding: 18px 16px 0; }
+
+  /* barra de acción */
+  .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--hondo); border-top: 2px solid var(--cal); padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .dock .in { max-width: 720px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto; gap: 8px 10px; align-items: center; }
+  .main { font: 400 clamp(18px, 5.6vw, 24px)/1 var(--display); letter-spacing: .02em; padding: 16px 10px 15px; min-height: 55px; background: var(--amarilla); color: var(--tinta); text-align: center; }
+  .main.stop { background: transparent; color: var(--cal); box-shadow: inset 0 0 0 2px var(--cal); }
+  .main:disabled { background: transparent; color: var(--cal-2); box-shadow: inset 0 0 0 2px var(--cal-3); cursor: default; }
+  .main:active:not(:disabled) { transform: translateY(1px); }
+  .cam { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 10px; font-size: 13px; color: var(--cal-2); box-shadow: inset 0 0 0 1.5px var(--cal-3); min-width: 64px; }
+  .cam svg { width: 26px; height: 26px; }
+  .cam[aria-pressed="true"] { color: var(--tinta); background: var(--cal); box-shadow: none; font-weight: 700; }
+  .alt { grid-column: 1 / -1; justify-self: center; }
+  #toast { position: fixed; left: 12px; right: 12px; bottom: calc(var(--dock) + env(safe-area-inset-bottom, 0px) + 8px); max-width: 696px; margin: 0 auto; z-index: 6; background: var(--cal); color: var(--tinta); padding: 12px 14px; font-size: 15px; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+  @media (max-width: 370px) { .num .n { font-size: 66px; } .kind { font-size: 27px; } .banner.go .state { font-size: 44px; } }
+  @media (prefers-reduced-motion: reduce) { .banner.wait .state { animation: none; } .chalkbar i { transition: none; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>Smart Ball</h1>
-  <p>App propia para el adidas miCoach Smart Ball · protocolo del SDK oficial de adidas</p>
-</header>
-<main>
-  <div id="support" hidden></div>
+<div class="app">
+  <header class="top">
+    <h1>Smart Ball</h1>
+    <p class="conn"><span id="conn">Sin balón</span> <button class="link" id="btnDisc" hidden>Desconectar</button></p>
+  </header>
+  <p class="notice" id="support" hidden></p>
 
-  <section class="card">
-    <div id="status" class="status off">
-      <div class="t" id="statusText">Balón no conectado</div>
-      <div class="s" id="statusSub"></div>
-      <div class="progress" id="progress" hidden><div id="progressBar"></div></div>
+  <section class="stage" id="stage" aria-label="Campo y trayectoria">
+    <canvas id="scene"></canvas>
+    <video id="preview" playsinline muted hidden></video>
+    <div class="banner" id="banner" role="status" aria-live="polite">
+      <div class="state" id="statusText"></div>
+      <div class="hint" id="statusSub"></div>
+      <div class="chalkbar" id="progress" hidden><i id="progressBar"></i></div>
     </div>
-    <div class="info" id="info" hidden></div>
-    <div class="btns">
-      <button class="big" id="btnConnect">Conectar balón</button>
-      <button class="big" id="btnArm" hidden>Preparar chute</button>
-      <button class="big sec" id="btnCancel" hidden>Cancelar</button>
-      <button class="big" id="btnReconnect" hidden>Reconectar</button>
-      <button class="big" id="btnRetry" hidden>Descargar otra vez</button>
-      <button class="sec" id="btnDemo">Probar sin balón (modo demostración)</button>
-      <button class="ghost" id="btnDisconnect" hidden>Desconectar</button>
+  </section>
+  <div class="views" id="views" hidden>
+    <button data-view="behind" aria-pressed="true">Perspectiva</button>
+    <button data-view="side" aria-pressed="false">Lateral</button>
+    <button data-view="top" aria-pressed="false">Arriba</button>
+    <button class="replay" id="btnReplay">Repetir</button>
+  </div>
+
+  <section id="result" hidden>
+    <div class="block">
+      <h2 class="kind" id="resType"></h2>
+      <p class="quiet" id="resWhen"></p>
+      <div id="resBody">
+        <div class="nums">
+          <div class="num"><span class="n" id="nSpeed"></span><span class="u">km/h</span><span class="c">velocidad de salida, estimada</span></div>
+          <div class="num"><span class="n" id="nSpin"></span><span class="u">rpm</span><span class="c" id="cSpin"></span></div>
+        </div>
+        <p class="reading" id="resReading"></p>
+        <ul class="facts3" id="flightFacts"></ul>
+        <p class="quiet" id="flightNote" style="margin-top:8px"></p>
+        <div class="ask" id="landAsk" hidden></div>
+      </div>
+      <p class="bad" id="resBad" hidden></p>
+    </div>
+
+    <div id="clipBlock" hidden>
+      <div class="rule"></div>
+      <div class="block">
+        <h3>El chute en vídeo</h3>
+        <div class="clipwrap" id="clipWrap">
+          <video id="clipVideo" playsinline preload="auto"></video>
+          <canvas id="clipOver" aria-hidden="true"></canvas>
+          <div class="mark" id="mark0" hidden></div><div class="mark" id="mark1" hidden></div>
+          <div class="stat" id="clipStat"></div>
+        </div>
+        <p class="cliphint" id="clipHint" hidden></p>
+        <p class="quiet" id="clipNote" style="margin-top:8px" hidden>La línea amarilla es la trayectoria que calculó el balón, colocada sobre el vídeo con tus dos toques. Si el aro acompaña al balón, el cálculo va bien.</p>
+        <input type="range" id="vSeek" min="0" max="1000" value="0" aria-label="Posición del vídeo" style="margin-top:8px">
+        <div class="transport">
+          <button id="vBack" aria-label="Fotograma anterior">‹</button>
+          <button id="vPlay" class="solid">Ver</button>
+          <button id="vFwd" aria-label="Fotograma siguiente">›</button>
+          <button id="vKick">Golpeo</button>
+          <button id="vRate" aria-label="Velocidad de reproducción">¼×</button>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="link" id="vMeasure">Medir el ángulo de salida</button>
+          <button class="link" id="vSetKick">Fijar el golpeo aquí</button>
+          <button class="link" id="vShare">Compartir vídeo</button>
+          <button class="link" id="vDelete">Borrar vídeo</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="detailBlock">
+      <div class="rule"></div>
+      <div class="block">
+        <h3>Cómo giraba y dónde le diste</h3>
+        <div class="pair">
+          <figure><canvas id="spinCanvas"></canvas><figcaption id="spinCap"></figcaption></figure>
+          <figure><canvas id="strikeCanvas"></canvas><figcaption id="strikeCap"></figcaption></figure>
+        </div>
+        <dl class="split" id="split"></dl>
+      </div>
+
+      <div class="rule"></div>
+      <div class="block">
+        <h3>Si fuera una falta</h3>
+        <div class="seg" id="distSeg" role="group" aria-label="Distancia a la portería">
+          <span class="lab">Portería a</span>
+          <button data-d="16" aria-pressed="false">16 m</button><button data-d="20" aria-pressed="true">20 m</button><button data-d="25" aria-pressed="false">25 m</button><button data-d="30" aria-pressed="false">30 m</button>
+        </div>
+        <label class="check"><input type="checkbox" id="set_wall"> Barrera a 9,15 m</label>
+        <ul class="lines" id="fkFacts"></ul>
+      </div>
+    </div>
+
+    <div class="block">
+      <ul class="notes" id="resNotes"></ul>
+      <div style="margin-top:16px">
+        <input type="text" id="tag" placeholder="Etiqueta: interior, empeine, barrera…" maxlength="80" aria-label="Etiqueta del chute">
+        <div class="chips"><button>Interior</button><button>Empeine</button><button>Exterior</button><button>Pierna izquierda</button><button>Pierna derecha</button></div>
+      </div>
     </div>
   </section>
 
-  <section class="card" id="result" hidden>
-    <div class="restop"><h2>Último chute</h2><span class="muted" id="resWhen"></span></div>
-    <div class="badge" id="resType"></div>
-    <div class="grid" id="resGrid"></div>
-    <div id="resNotes"></div>
-    <canvas id="spinCanvas"></canvas>
-    <canvas id="plotCanvas"></canvas>
-    <div class="tagrow">
-      <input id="tag" placeholder="Etiqueta (p. ej. interior derecha, barrera)" maxlength="80">
-      <button class="chip">Interior</button><button class="chip">Empeine</button><button class="chip">Exterior</button><button class="chip">Pierna izquierda</button><button class="chip">Pierna derecha</button>
-    </div>
-  </section>
-
-  <section class="card">
-    <div class="restop"><h2>Historial <span class="muted" id="histCount"></span></h2></div>
+  <div class="rule"></div>
+  <section class="block">
+    <h3>Chutes guardados <span class="quiet" id="histCount"></span></h3>
+    <ul class="marks" id="marks" hidden></ul>
     <ul id="history"></ul>
-    <div class="row" style="margin-top:10px">
-      <button class="sec" id="btnShare">Compartir datos</button>
-      <button class="sec" id="btnCsv">Excel (CSV)</button>
-      <button class="sec" id="btnJson">Datos completos (JSON)</button>
-      <button class="sec" id="btnImport">Importar JSON</button>
-      <button class="danger" id="btnClear">Borrar todo</button>
+    <div class="row" style="margin-top:14px">
+      <button class="btn" id="btnShare">Compartir datos</button>
+      <button class="btn" id="btnCsv">Excel (CSV)</button>
+      <button class="btn" id="btnJson">Datos completos</button>
+      <button class="btn" id="btnImport">Importar</button>
+      <button class="btn warn" id="btnClear">Borrar todo</button>
     </div>
-    <div class="confirm" id="confirmClear" hidden>¿Borrar todos los chutes de este móvil? No se puede deshacer.
-      <div class="row" style="margin-top:8px"><button class="danger" id="btnClearYes">Sí, borrar</button><button class="sec" id="btnClearNo">No</button></div>
+    <div class="confirm" id="confirmClear" hidden>¿Borrar todos los chutes y vídeos de este móvil? No se puede deshacer.
+      <div class="row" style="margin-top:10px"><button class="btn solid" id="btnClearYes">Sí, borrar</button><button class="btn" id="btnClearNo">No</button></div>
     </div>
     <input type="file" id="fileIn" accept=".json,application/json" hidden>
   </section>
 
   <details>
     <summary>Cómo se usa</summary>
-    <ol>
-      <li><b>Carga.</b> Pon el balón en su base alineando los dibujos. Luz verde parpadeando largo = cargando; parpadeo rápido = mal alineado; luces apagadas = cargado (≈1 h).</li>
-      <li><b>Conecta.</b> Bluetooth y Ubicación activados, en Google Chrome. Pulsa «Conectar balón» y elige el que empieza por <b>DB</b>. Si no sale, acércalo y prueba a moverlo o a ponerlo un momento en la base.</li>
-      <li><b>Chuta.</b> Pulsa «Preparar chute», deja el balón quieto en el suelo y espera al silbato. El chute debe subir al menos 1 m y recorrer al menos 10 m sin botar ni rodar.</li>
-      <li><b>Datos.</b> Se descargan solos si el móvil está a menos de 10 m. Si se corta, acércate al balón: la app reconecta y descarga el último chute.</li>
-    </ol>
-    <p class="muted"><b>Qué es medido y qué es estimado.</b> El giro (rpm) sale de la rotación del vector de aceleración durante el vuelo y es la medida más sólida. La inclinación del eje se mide respecto a la vertical del balón en reposo. Liftado/cortado, ángulo de salida y velocidad son estimaciones con modelo aerodinámico: compáralas con vídeo antes de fiarte de ellas.</p>
+    <div>
+      <ol>
+        <li><b>Carga.</b> Pon el balón en su base alineando los dibujos. Luz verde con parpadeo largo: está cargando. Parpadeo rápido: mal alineado. Luces apagadas: cargado (tarda una hora).</li>
+        <li><b>Conecta.</b> En Google Chrome, con Bluetooth y Ubicación activados, pulsa «Conectar balón» y elige el que empieza por DB.</li>
+        <li><b>Coloca.</b> Balón en el suelo con el logo hacia arriba y las flechas apuntando al objetivo, siempre igual. Así lo pedía la app original.</li>
+        <li><b>Chuta.</b> Pulsa «Preparar chute», no lo toques hasta el silbato y chuta. Tiene que subir al menos 1 m y recorrer 10 m sin botar ni rodar.</li>
+        <li><b>Recoge el balón.</b> Si se aleja más de unos 10 m se corta la conexión; el chute queda guardado dentro y se descarga solo al acercarlo al móvil.</li>
+      </ol>
+      <p><b>Vídeo.</b> Activa «Vídeo» y apoya el móvil en un trípode. Graba solo unos segundos antes y después de cada chute, y lo puedes ver a cámara lenta, fotograma a fotograma. Si lo grabas de lado (perpendicular al tiro y con el móvil derecho), «Medir el ángulo de salida» fija la altura de la trayectoria y la dibuja encima del vídeo.</p>
+      <p style="margin-top:10px"><b>Qué es medido y qué es estimado.</b> El giro en rpm y la inclinación del eje salen directamente del sensor. La velocidad, el reparto liftado, rosca y bala, y el efecto del giro en la trayectoria se calculan con un modelo aerodinámico. El ángulo de salida es lo menos seguro con el balón solo: lo fijan el primer bote, si entra en el segundo que graba el balón, o el vídeo.</p>
+    </div>
   </details>
-
   <details>
     <summary>Ajustes</summary>
-    <div class="toggles">
-      <label><input type="checkbox" id="set_sound"> Silbato y pitidos</label>
-      <label><input type="checkbox" id="set_speak"> Leer el resultado en voz alta</label>
-      <label><input type="checkbox" id="set_vibrate"> Vibración</label>
+    <div>
+      <label class="check"><input type="checkbox" id="set_openField"><span>Campo abierto<small>El balón bota en el suelo antes de tocar red, pared o persona: uso el primer bote para afinar la trayectoria.</small></span></label>
+      <label class="check"><input type="checkbox" id="set_sound"> Silbato y pitidos</label>
+      <label class="check"><input type="checkbox" id="set_speak"> Leer el resultado en voz alta</label>
+      <label class="check"><input type="checkbox" id="set_vibrate"> Vibración</label>
+      <label class="check"><input type="checkbox" id="set_camAudio"><span>Grabar el sonido<small>El chasquido del golpeo sincroniza el vídeo con los datos.</small></span></label>
+      <label class="check"><input type="checkbox" id="set_cam60"><span>Vídeo a 60 imágenes por segundo<small>Si el móvil lo permite. Ocupa más.</small></span></label>
+      <p class="quiet" id="clipUsage" style="margin-top:8px"></p>
     </div>
   </details>
-
   <details id="diag">
     <summary>Diagnóstico</summary>
-    <p class="muted">Si algo falla, pulsa «Copiar registro» y pégamelo.</p>
-    <div class="row">
-      <button class="sec" id="btnCopyLog">Copiar registro</button>
-      <button class="sec" id="btnReadStatus">Leer estado</button>
-      <button class="sec" id="btnAnyDevice">Buscar cualquier dispositivo</button>
-      <button class="sec" id="btnRate">Fijar muestreo 1 ms</button>
-      <button class="sec" id="btnForce">Descargar lo que tenga el balón</button>
+    <div>
+      <p class="quiet">Si algo falla, pulsa «Copiar registro» y pégamelo.</p>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="btnCopyLog">Copiar registro</button>
+        <button class="btn" id="btnReadStatus">Leer estado</button>
+        <button class="btn" id="btnAnyDevice">Buscar cualquier dispositivo</button>
+        <button class="btn" id="btnRate">Fijar muestreo 1 ms</button>
+        <button class="btn" id="btnForce">Descargar lo que tenga el balón</button>
+      </div>
+      <pre id="log"></pre>
     </div>
-    <pre id="log"></pre>
   </details>
-  <p class="muted" style="text-align:center;margin:4px 0 18px">Smart Ball · versión <span id="ver"></span></p>
-</main>
-<div id="toast" hidden></div>
+  <p class="quiet ver">Smart Ball, versión <span id="ver"></span>. Proyecto personal sin relación con adidas.</p>
+</div>
+
+<div class="dock">
+  <div class="in">
+    <button class="main" id="btnMain">Conectar balón</button>
+    <button class="cam" id="btnCam" aria-pressed="false" aria-label="Grabar vídeo de cada chute">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2.5" y="6.5" width="13" height="11"/><path d="M15.5 10.5l6-3v9l-6-3z"/></svg>
+      Vídeo
+    </button>
+    <button class="link alt" id="btnAlt" hidden></button>
+  </div>
+</div>
+<div id="toast" role="status" hidden></div>
 <script>
 /* sbcore.js — núcleo de la app Smart Ball.
  *
@@ -444,9 +622,11 @@
   const PHYS = { g: 9.80665, rho: 1.2, R: 0.11, m: 0.43 };
   PHYS.A = Math.PI * PHYS.R * PHYS.R;
   // Coeficiente de arrastre con crisis de arrastre hacia 12 m/s (balón de 32 paneles).
-  const cdModel = (v) => 0.26 + 0.20 / (1 + Math.exp((v - 12) / 1.5));
+  // Valores de túnel de viento y de análisis de trayectorias (Asai et al. 2007; Goff y Carré 2009-2010):
+  // sin giro, Cd ≈ 0,45 por debajo de ~12 m/s y ≈ 0,21 por encima; el giro lo sube hasta ≈ 0,35 con S = 0,3.
+  const cdModel = (v, S) => 0.21 + 0.24 / (1 + Math.exp((v - 12.5) / 1.3)) + Math.min(0.47 * Math.max(0, S || 0), 0.2);
   // Coeficiente de sustentación (Magnus) en función del parámetro de giro S = R·ω/v.
-  const clModel = (S) => 0.30 * (1 - Math.exp(-Math.max(0, S) / 0.12));
+  const clModel = (S) => 0.33 * (1 - Math.exp(-Math.max(0, S) / 0.11));
 
   // ------------------------------------------------------------------ simulador
   function mulberry32(a) {
@@ -502,7 +682,7 @@
         if (!launched) { vel = vL.slice(); launched = true; }
         const sp = V.norm(vel), S = Rb * wMag / Math.max(sp, 1);
         const k = rho * A / (2 * m);
-        fW = V.add(V.mul(vel, -k * cdModel(sp) * cdScale * sp), V.mul(V.cross(axW, vel), k * clModel(S) * clScale * sp));
+        fW = V.add(V.mul(vel, -k * cdModel(sp, S) * cdScale * sp), V.mul(V.cross(axW, vel), k * clModel(S) * clScale * sp));
         if (!landed) {
           vel = V.add(vel, V.mul(V.add(fW, [0, 0, -g]), dt));
           pos = V.add(pos, V.mul(vel, dt));
@@ -590,8 +770,9 @@
     for (let i = iImp + 1; i < Math.min(N, iImp + Math.round(0.04 * fs)); i++) {
       if (clipped(i) || magG[i] > 3.6) { iCe = i; gap = 0; } else if (++gap > 2) break;
     }
-    const Tc = (iCe - iImp + 1) * dt;
-    res.contactMs = Math.round(Tc * 1000);
+    const TcSat = (iCe - iImp + 1) * dt;
+    res.contactMs = Math.round(TcSat * 1000);
+    const Tc = Math.max(0.006, Math.min(0.012, TcSat)); // para la fase del giro: contacto típico de 7 a 10 ms
 
     // 4) ventana de vuelo
     let iS = iCe + Math.round(0.05 * fs);
@@ -601,16 +782,19 @@
       const e2 = mean(Array.from({ length: Math.min(200, N - iS - 31) }, (_, k) => hp(iS + 30 + k)));
       if (e1 > 3 * e2 + 0.02) iS += Math.round(0.03 * fs); else break;
     }
-    // segundo impacto (suelo, red, portero…): saturación, salto brusco o subida clara sobre el nivel del vuelo
-    const nBase = Math.min(Math.round(0.1 * fs), N - iS);
-    const base = nBase > 10 ? median(magG.slice(iS, iS + nBase)) : 1;
+    // Segundo impacto (suelo, red, portero…): salto brusco entre muestras consecutivas. En vuelo la señal
+    // es suave (gira como mucho a ~15 Hz: cambia menos de 0,4 g por muestra); un golpe la rompe y satura.
     let iE = N - 6, second = false;
-    for (let i = iS; i < N; i++) {
-      if (clipped(i) || magG[i] > base + 1.5 || (i >= 3 && V.norm(V.sub(G[i], G[i - 3])) > 1.2)) {
-        iE = i - Math.round(0.012 * fs); second = true; break;
+    for (let i = Math.max(iS, 1); i < N; i++) {
+      const jerk = V.norm(V.sub(G[i], G[i - 1]));
+      let nClip = 0;
+      for (let k = 0; k < 3; k++) if (Math.abs(samples[i][k]) >= CLIP) nClip++;
+      if (jerk > 1.0 || (nClip >= 2 && jerk > 0.4)) {
+        iE = i - Math.round(0.012 * fs); second = true; res.secondImpactMs = Math.round((i - iImp) * dt * 1000); break;
       }
     }
     res.iS = iS; res.iE = iE; res.secondImpact = second;
+    res.recordedMs = Math.round((N - iImp) * dt * 1000);
     res.flightMs = Math.round((iE - iS) * dt * 1000);
     if (iE - iS < Math.round(0.12 * fs)) {
       res.reason = 'Vuelo demasiado corto para analizarlo (' + Math.max(0, res.flightMs) + ' ms). El chute debe subir ≥1 m y recorrer ≥10 m sin tocar nada.';
@@ -624,10 +808,23 @@
     const A = [];
     for (let i = iS; i <= iE; i++) A.push([F[0][i - p0], F[1][i - p0], F[2][i - p0]]);
     const n = A.length;
+    // Con mucho giro, si el sensor no está justo en el centro, la aceleración centrípeta satura algún eje
+    // (±4 g) durante parte de cada vuelta. Esas muestras, y sus vecinas (el filtro reparte el recorte), no
+    // cumplen el modelo y se dejan fuera de todos los ajustes.
+    const bad = new Uint8Array(n), halo = Math.round(0.014 * fs);
+    for (let i = Math.max(0, iS - halo); i <= Math.min(N - 1, iE + halo); i++) {
+      if (!clipped(i)) continue;
+      for (let j = Math.max(iS, i - halo); j <= Math.min(iE, i + halo); j++) bad[j - iS] = 1;
+    }
+    let nBad = 0; for (let i = 0; i < n; i++) nBad += bad[i];
+    res.saturatedFrac = nBad / n;
+    if (nBad > 0.8 * n) { for (let i = 0; i < n; i++) bad[i] = 0; nBad = 0; res.warnings.push('El sensor está saturado casi todo el vuelo: el análisis es poco fiable.'); }
+    else if (nBad > 0.05 * n) res.warnings.push('Con tanto giro el sensor se satura en parte de cada vuelta (' + Math.round(100 * nBad / n) + ' % del vuelo): uso solo el resto.');
 
     // 6) ajuste del giro: ȧ = a × ω − k  (k = c × ω, c = término centrípeto constante)
     const AtA = Array.from({ length: 6 }, () => new Array(6).fill(0)), Atb = new Array(6).fill(0);
     for (let i = 1; i < n - 1; i++) {
+      if (bad[i]) continue;
       const ad = [0, 1, 2].map((k) => (A[i + 1][k] - A[i - 1][k]) / (2 * dt));
       const [x, y, z] = A[i];
       const rows = [[0, -z, y, -1, 0, 0], [z, 0, -x, 0, -1, 0], [-y, x, 0, 0, 0, -1]]; // a×ω − k
@@ -644,13 +841,19 @@
       w = sol.slice(0, 3);
       const k = sol.slice(3, 6), wn2 = V.dot(w, w);
       c = wn2 > 1e-6 ? V.mul(V.cross(w, k), 1 / wn2) : [0, 0, 0];
-      if (V.norm(c) > 2.5) { sol = null; } // centrípeto absurdo → modelo simple
+      // centrípeto admisible: el de un sensor a 12 mm del centro como mucho (ω²·r), nunca menos de 2,5 g
+      const cMax = Math.max(2.5, Math.min(6, wn2 * 0.012 / PHYS.g));
+      if (V.norm(c) > cMax) { sol = null; } // centrípeto absurdo → modelo simple
     }
+    let ctr = c;   // centro de la circunferencia que describe el vector medido
     if (!sol) { // modelo de 3 parámetros sobre datos centrados
       model = 3;
-      const mu = [0, 1, 2].map((k) => mean(A.map((s) => s[k])));
+      const Ag = A.filter((_, i) => !bad[i]);
+      const mu = [0, 1, 2].map((k) => mean(Ag.map((s) => s[k])));
+      ctr = mu;
       const B = Array.from({ length: 3 }, () => [0, 0, 0]), bb = [0, 0, 0];
       for (let i = 1; i < n - 1; i++) {
+        if (bad[i]) continue;
         const ad = [0, 1, 2].map((k) => (A[i + 1][k] - A[i - 1][k]) / (2 * dt));
         const [x, y, z] = V.sub(A[i], mu);
         const rows = [[0, -z, y], [z, 0, -x], [-y, x, 0]];
@@ -668,22 +871,29 @@
 
     // 7) refinado de la velocidad angular con el ángulo del vector en el plano ⊥ eje
     const e1 = V.perp(s), e2 = V.cross(s, e1);
+    // Solo con las muestras fiables; al saltar un hueco, el avance esperado (−ω·Δt) dice cuántas vueltas han pasado.
     const ang = [], tt = [], rad = [];
-    let prev = null, acc = 0;
+    let prev = null, prevI = 0, acc = 0;
     for (let i = 0; i < n; i++) {
-      const pv = V.sub(A[i], c);
+      if (bad[i]) continue;
+      const pv = V.sub(A[i], ctr);
       const u = V.dot(pv, e1), v = V.dot(pv, e2);
       rad.push(Math.hypot(u, v));
-      let th = Math.atan2(v, u);
-      if (prev !== null) { let d = th - prev; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; acc += d; } else acc = th;
-      prev = th; ang.push(acc); tt.push(i * dt);
+      const th = Math.atan2(v, u);
+      if (prev !== null) {
+        const exp = i - prevI > 1 ? -wn * (i - prevI) * dt : 0;
+        let d = th - prev - exp; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+        acc += exp + d;
+      } else acc = th;
+      prev = th; prevI = i; ang.push(acc); tt.push(i * dt);
     }
+    const nA = ang.length;
     const tm = mean(tt), am = mean(ang);
     let sxy = 0, sxx = 0, syy = 0;
-    for (let i = 0; i < n; i++) { sxy += (tt[i] - tm) * (ang[i] - am); sxx += (tt[i] - tm) ** 2; syy += (ang[i] - am) ** 2; }
-    const slope = sxy / sxx;
+    for (let i = 0; i < nA; i++) { sxy += (tt[i] - tm) * (ang[i] - am); sxx += (tt[i] - tm) ** 2; syy += (ang[i] - am) ** 2; }
+    const slope = sxx > 0 ? sxy / sxx : 0;
     const r2 = syy > 0 ? (sxy * sxy) / (sxx * syy) : 0;
-    const revs = Math.abs(ang[n - 1] - ang[0]) / (2 * Math.PI);
+    const revs = nA ? Math.abs(ang[nA - 1] - ang[0]) / (2 * Math.PI) : 0;
     const radius = median(rad);
     res.fit = { cond, slope, r2, revs, radiusG: radius, lsRpm: wn * 60 / (2 * Math.PI) };
     let wRate = wn;
@@ -698,9 +908,14 @@
     res.spinConfidence = lowSpin ? 'baja' : (r2 > 0.98 && revs > 1 ? 'alta' : 'media');
 
     // 8) fuerza aerodinámica y velocidad estimada
-    const nEarly = Math.min(n, Math.round(0.2 * fs));
-    const fMags = [];
-    for (let i = 0; i < nEarly; i++) fMags.push(V.norm(V.sub(A[i], c)));
+    let nEarly = Math.min(n, Math.round(0.2 * fs));
+    let fMags = [], fIdx = [];
+    for (let i = 0; i < nEarly; i++) if (!bad[i]) { fMags.push(V.norm(V.sub(A[i], c))); fIdx.push(i); }
+    if (fMags.length < 0.25 * nEarly) {   // demasiado saturado al principio: se amplía la ventana
+      nEarly = Math.min(n, Math.round(0.4 * fs)); fMags = []; fIdx = [];
+      for (let i = 0; i < nEarly; i++) if (!bad[i]) { fMags.push(V.norm(V.sub(A[i], c))); fIdx.push(i); }
+    }
+    if (!fMags.length) { for (let i = 0; i < nEarly; i++) { fMags.push(V.norm(V.sub(A[i], c))); fIdx.push(i); } }
     const aeroG = median(fMags);
     res.aeroG = aeroG;
     const { g, rho, R: Rb, m, A: Ab } = PHYS;
@@ -708,15 +923,17 @@
     let v = 25, Cd = 0.26, Cl = 0;
     for (let it = 0; it < 30; it++) {
       const S = lowSpin ? 0 : Rb * wRate / Math.max(v, 1);
-      Cd = cdModel(v); Cl = clModel(S);
+      Cd = cdModel(v, S); Cl = clModel(S);
       v = Math.sqrt(2 * m * Fms2 / (rho * Ab * Math.hypot(Cd, Cl)));
     }
-    const tMid = ((iS + nEarly / 2) - iImp) * dt;
+    const tMid = ((iS + mean(fIdx)) - iImp) * dt;
     const kD = rho * Ab * Cd / (2 * m);
     const inv = 1 / v - kD * tMid;
     const v0 = inv > 0 ? 1 / inv : v;
     res.speedMs = v0; res.speedKmh = v0 * 3.6;
     res.cd = Cd; res.cl = Cl;
+    if (v0 > 45) res.warnings.push('La velocidad calculada no es creíble (ningún chute pasa de unos 150 km/h): no te fíes de la trayectoria de este chute.');
+    if (res.saturatedFrac > 0.5 && res.spinConfidence === 'alta') res.spinConfidence = 'media';
 
     // 9) eje respecto al suelo
     if (up) {
@@ -728,40 +945,99 @@
     }
 
     // 10) dirección de salida y componentes liftado / lateral / bala (estimación)
-    if (up && !lowSpin) {
-      const comp = (phiOffset, thOffset) => {
-        const nDir = Math.min(n, Math.round(0.25 * fs));
-        let Fr = [0, 0, 0], sumMag = 0;
-        for (let i = 0; i < nDir; i++) {
+    if (up) {
+      // Con poco giro se usa un ajuste sin término centrípeto (ȧ = a × ω) solo para deshacer el giro del vector.
+      let axD = s, rateD = wRate, cD = c;
+      if (lowSpin) {
+        const B = Array.from({ length: 3 }, () => [0, 0, 0]), bb = [0, 0, 0];
+        for (let i = 1; i < n - 1; i++) {
+          if (bad[i]) continue;
+          const ad = [0, 1, 2].map((k) => (A[i + 1][k] - A[i - 1][k]) / (2 * dt));
+          const [x, y, z] = A[i];
+          const rows = [[0, -z, y], [z, 0, -x], [-y, x, 0]];
+          for (let r = 0; r < 3; r++) for (let p = 0; p < 3; p++) { bb[p] += rows[r][p] * ad[r]; for (let q = 0; q < 3; q++) B[p][q] += rows[r][p] * rows[r][q]; }
+        }
+        const wl = solveLinear(B, bb) || [0, 0, 0];
+        rateD = Math.min(V.norm(wl), 12); axD = rateD > 1e-6 ? V.unit(wl) : s; cD = [0, 0, 0];
+      }
+      // Dirección de la velocidad en el marco del balón en reposo, a partir de la fuerza aerodinámica media
+      // de las muestras [i0, i1) una vez deshecho el giro.
+      const dirOf = (i0, i1, phiOffset, thOffset, thScale) => {
+        let Fr = [0, 0, 0], sumMag = 0, anyGood = false;
+        for (let i = i0; i < i1; i++) if (!bad[i]) { anyGood = true; break; }
+        for (let i = i0; i < i1; i++) {
+          if (anyGood && bad[i]) continue;
           const t = (iS + i - iImp) * dt;
-          const Th = wRate * (t - Tc / 2) + thOffset;
-          const fb = V.sub(A[i], c);
-          const fr = V.rot(fb, s, Th);
+          const Th = rateD * (t - Tc / 2) * (thScale == null ? 1 : thScale) + thOffset;
+          const fr = V.rot(V.sub(A[i], cD), axD, Th);
           Fr = V.add(Fr, fr); sumMag += V.norm(fr);
         }
-        const steadiness = V.norm(Fr) / (sumMag || 1);
-        const phi = Math.atan2(Cl, Cd) + phiOffset;
-        const Fpar = V.dot(Fr, s);
-        const Fper = V.sub(Fr, V.mul(s, Fpar));
-        const uDir = V.rot(V.unit(Fper), s, -(Math.PI - phi));
+        const phi = (lowSpin ? 0 : Math.atan2(Cl, Cd)) + phiOffset;
+        const Fpar = V.dot(Fr, axD);
+        const Fper = V.sub(Fr, V.mul(axD, Fpar));
+        const uDir = V.rot(V.unit(Fper), axD, -(Math.PI - phi));
         let al = -Fpar, be = V.norm(Fper) * Math.cos(phi);
         const nn = Math.hypot(al, be) || 1; al /= nn; be /= nn;
-        const vhat = V.add(V.mul(s, al), V.mul(uDir, be));
+        return { vhat: V.add(V.mul(axD, al), V.mul(uDir, be)), steadiness: V.norm(Fr) / (sumMag || 1) };
+      };
+      const comp = (phiOffset, thOffset, thScale) => {
+        // Dos tramos consecutivos y extrapolación lineal al instante de salida: la gravedad (y el efecto) van
+        // girando la velocidad durante el vuelo y, sin esto, el ángulo de salida saldría sesgado a la baja.
+        const nDir = Math.min(n, Math.round((lowSpin ? 0.15 : 0.25) * fs)), h1 = Math.floor(nDir / 2);
+        const d1 = dirOf(0, h1, phiOffset, thOffset, thScale), d2 = dirOf(h1, nDir, phiOffset, thOffset, thScale);
+        const t1 = (iS + h1 / 2 - iImp) * dt - Tc / 2, t2 = (iS + (h1 + nDir) / 2 - iImp) * dt - Tc / 2;
+        const vhat = V.unit(V.sub(d1.vhat, V.mul(V.sub(d2.vhat, d1.vhat), t1 / (t2 - t1))));
+        const steadiness = Math.min(d1.steadiness, d2.steadiness);
         const elev = Math.asin(Math.max(-1, Math.min(1, V.dot(vhat, up))));
         const h = V.unit(V.sub(vhat, V.mul(up, V.dot(vhat, up))));
         const left = V.cross(up, h);
-        return { steadiness, elevDeg: elev * 180 / Math.PI, top: rpm * V.dot(s, left), side: rpm * V.dot(s, up), rifle: rpm * V.dot(s, h) };
+        return { steadiness, vhat, elevDeg: elev * 180 / Math.PI, top: rpm * V.dot(s, left), side: rpm * V.dot(s, up), rifle: rpm * V.dot(s, h) };
       };
       const base = comp(0, 0);
       const variants = [];
-      for (const dp of [-0.26, 0, 0.26]) for (const dth of [-wRate * Tc / 2, 0, wRate * Tc / 2]) variants.push(comp(dp, dth));
-      const tops = variants.map((x) => x.top);
-      const signFlip = Math.min(...tops) < 0 && Math.max(...tops) > 0;
-      res.topRpm = base.top; res.rifleRpm = base.rifle; res.elevDeg = base.elevDeg;
-      res.topRange = [Math.min(...tops), Math.max(...tops)];
+      if (lowSpin) { for (const dp of [-0.15, 0, 0.15]) for (const sc of [0, 1, 2]) variants.push(comp(dp, 0, sc)); }
+      else { for (const dp of [-0.17, 0, 0.17]) for (const dth of [-wRate * Tc / 4, 0, wRate * Tc / 4]) variants.push(comp(dp, dth)); }
+      const elevs = variants.map((x) => x.elevDeg);
+      res.elevDeg = base.elevDeg;
+      res.elevRange = [Math.min(...elevs), Math.max(...elevs)];
       res.directionSteadiness = base.steadiness;
-      res.topConfidence = signFlip || base.steadiness < 0.6 ? 'baja' : (Math.abs(base.top) > 0.5 * rpm && base.steadiness > 0.85 ? 'alta' : 'media');
-      if (base.elevDeg < -15 || base.elevDeg > 70) { res.topConfidence = 'baja'; res.warnings.push('La dirección de salida estimada no es coherente; toma liftado/cortado con cautela.'); }
+      res.variants = variants.map((x) => ({ elevDeg: x.elevDeg, top: lowSpin ? 0 : x.top, rifle: lowSpin ? 0 : x.rifle }));
+      if (!lowSpin) {
+        const tops = variants.map((x) => x.top);
+        const signFlip = Math.min(...tops) < 0 && Math.max(...tops) > 0;
+        res.topRpm = base.top; res.rifleRpm = base.rifle;
+        res.topRange = [Math.min(...tops), Math.max(...tops)];
+        res.topConfidence = signFlip || base.steadiness < 0.6 ? 'baja' : (Math.abs(base.top) > 0.5 * rpm && base.steadiness > 0.85 ? 'alta' : 'media');
+      } else res.topConfidence = 'baja';
+      res.elevConfidence = (res.elevRange[1] - res.elevRange[0]) > 22 || base.steadiness < 0.6 ? 'baja' : ((res.elevRange[1] - res.elevRange[0]) < 9 ? 'alta' : 'media');
+      if (base.elevDeg < -15 || base.elevDeg > 70) {
+        res.topConfidence = 'baja'; res.elevConfidence = 'baja';
+        res.warnings.push('La dirección de salida estimada no es coherente; toma liftado/cortado y la trayectoria con cautela.');
+      }
+      res.launch = {
+        speed: v0, elevDeg: base.elevDeg, lowSpin,
+        top: lowSpin ? 0 : base.top, side: lowSpin ? 0 : res.sideRpm, rifle: lowSpin ? 0 : base.rifle,
+      };
+      res.dir = { vhat: base.vhat, s, up, tc: Tc };
+
+      // 10b) Campo abierto: si el segundo impacto es el primer bote, el tiempo de vuelo fija el ángulo de salida
+      // mucho mejor que la dirección de la fuerza (sobre todo en liftados y cortados).
+      if (o.openField && res.secondImpactMs) {
+        const Tfl = res.secondImpactMs / 1000 - Tc;
+        const fit = fitLanding(res.launch, Tfl);
+        if (fit != null && fit > res.elevRange[0] - 6 && fit < res.elevRange[1] + 6) {
+          let e = fit;
+          for (let pass = 0; pass < 3; pass++) {      // el reparto liftado/bala cambia el tiempo de vuelo: se repite
+            setElevation(res, e, 'bote');
+            const f2 = fitLanding(res.launch, Tfl);
+            if (f2 == null || Math.abs(f2 - e) < 0.2) break;
+            e = f2;
+          }
+          res.landFit = { flightS: Tfl };
+        } else if (fit != null) {
+          res.warnings.push('El segundo impacto no encaja con un bote en el suelo: no se usa para afinar la trayectoria.');
+        }
+      }
     }
 
     // 11) clasificación
@@ -773,7 +1049,7 @@
   }
 
   function classify(r) {
-    if (r.lowSpin || r.rpm < 90) return r.speedKmh >= 90 ? 'Sin giro (knuckle)' : 'Casi sin giro';
+    if (r.lowSpin || r.rpm < 90) return r.speedKmh >= 90 ? 'Sin giro' : 'Casi sin giro';
     const parts = [];
     const tot = r.rpm;
     if (r.topRpm != null && r.topConfidence !== 'baja') {
@@ -781,10 +1057,145 @@
       else if (r.topRpm < -0.35 * tot) parts.push('cortado');
     }
     if (r.sideRpm != null && Math.abs(r.sideRpm) > 0.35 * tot) parts.push('rosca a la ' + (r.sideRpm > 0 ? 'izquierda' : 'derecha'));
-    if (r.rifleRpm != null && r.topConfidence !== 'baja' && Math.abs(r.rifleRpm) > 0.6 * tot) parts.push('en bala');
-    if (!parts.length) return r.horizRpm > 0.7 * tot ? 'Eje horizontal (liftado o cortado)' : 'Giro mixto';
-    const s = parts.join(' + ');
+    if (r.rifleRpm != null && r.topConfidence !== 'baja' && Math.abs(r.rifleRpm) > 0.6 * tot) parts.push('giro en bala');
+    if (!parts.length) return r.horizRpm > 0.7 * tot ? 'Eje horizontal: liftado o cortado' : 'Giro mixto';
+    const s = parts.length === 1 ? parts[0] : parts[0] + ' con ' + parts.slice(1).join(' y ');
     return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  // Fija el ángulo de salida con un dato mejor (el bote o el vídeo) y recoloca el reparto liftado/bala:
+  // se gira la dirección de salida alrededor del eje de giro hasta que tenga ese ángulo (corrige la fase).
+  function setElevation(res, elevDeg, source) {
+    if (!res || !res.launch) return res;
+    const L = { ...res.launch, elevDeg };
+    if (!res.lowSpin && res.dir) {
+      const { vhat, s, up } = res.dir, rpm = res.rpm;
+      let best = null;
+      for (let dDeg = -75; dDeg <= 75; dDeg += 0.5) {
+        const vh = V.rot(vhat, s, dDeg * Math.PI / 180);
+        const el = Math.asin(Math.max(-1, Math.min(1, V.dot(vh, up)))) * 180 / Math.PI;
+        if (Math.abs(el - elevDeg) < 0.6 && (!best || Math.abs(dDeg) < Math.abs(best.dDeg))) best = { dDeg, vh };
+      }
+      if (best) {
+        const h = V.unit(V.sub(best.vh, V.mul(up, V.dot(best.vh, up)))), left = V.cross(up, h);
+        L.top = rpm * V.dot(s, left); L.rifle = rpm * V.dot(s, h);
+        res.topRpm = L.top; res.rifleRpm = L.rifle; res.phaseFixDeg = best.dDeg;
+        if (res.topConfidence === 'baja' && Math.abs(L.top) > 0.25 * rpm) res.topConfidence = 'media';
+      }
+    }
+    res.launch = L; res.elevDeg = elevDeg; res.elevSource = source;
+    res.elevRange = [elevDeg - 2, elevDeg + 2]; res.elevConfidence = 'alta';
+    res.variants = [-2, 2].map((d) => ({ elevDeg: elevDeg + d, top: L.top, rifle: L.rifle }));
+    res.type = classify(res);
+    return res;
+  }
+  // Ángulo de salida a partir de dos posiciones del balón en un vídeo lateral: la cuerda entre el golpeo y
+  // dtS segundos después forma chordDeg con la horizontal; se busca la salida que la reproduce.
+  function elevFromChord(launch, chordDeg, dtS) {
+    const chord = (e) => { const tr = flight({ ...launch, elevDeg: e }, { tMax: dtS + 0.5 }); const q = flightAtT(tr, dtS); return Math.atan2(q.z - tr.Z[0], q.x) * 180 / Math.PI; };
+    let lo = 1, hi = 75;
+    if (!(dtS > 0.02) || chord(lo) > chordDeg) return Math.max(1, chordDeg);
+    if (chord(hi) < chordDeg) return hi;
+    for (let i = 0; i < 24; i++) { const mid = (lo + hi) / 2; if (chord(mid) < chordDeg) lo = mid; else hi = mid; }
+    return (lo + hi) / 2;
+  }
+
+  // ------------------------------------------------------------------ trayectoria
+  // Mundo: x hacia el objetivo (horizontal), y a la izquierda, z arriba. El balón sale del origen.
+  // Giro en rpm: top (eje y; liftado > 0), side (eje z; curva a la izquierda > 0), rifle (eje x).
+  function flight(launch, opts) {
+    const o = opts || {};
+    const dt = o.dt || 0.004, tMax = o.tMax || 8, xMax = o.xMax || 120;
+    const { g, rho, R: Rb, m, A } = PHYS, k = rho * A / (2 * m);
+    const cdS = o.cdScale || 1, clS = o.clScale == null ? 1 : o.clScale;
+    const e = Math.max(1, Math.min(75, launch.elevDeg || 0)) * Math.PI / 180, v0 = Math.max(1, launch.speed || 0);
+    const w = [launch.rifle || 0, launch.top || 0, launch.side || 0].map((x) => x * 2 * Math.PI / 60);
+    const wMag = V.norm(w), sx = wMag > 1e-9 ? V.mul(w, 1 / wMag) : [0, 0, 0];
+    const acc = (v) => {
+      const sp = V.norm(v), S = Rb * wMag / Math.max(sp, 1);
+      const a = V.add(V.mul(v, -k * cdModel(sp, S) * cdS * sp), V.mul(V.cross(sx, v), k * clModel(S) * clS * sp));
+      a[2] -= g; return a;
+    };
+    let p = [0, 0, Rb], v = [v0 * Math.cos(e), 0, v0 * Math.sin(e)], t = 0;
+    const T = [0], X = [0], Y = [0], Z = [Rb];
+    let apex = { t: 0, x: 0, z: Rb }, land = null;
+    while (t < tMax && p[0] < xMax) {
+      const a1 = acc(v), vm = V.add(v, V.mul(a1, dt / 2)), a2 = acc(vm);   // punto medio
+      const pn = V.add(p, V.mul(vm, dt)), vn = V.add(v, V.mul(a2, dt));
+      if (pn[2] <= Rb && t > 0.02) {
+        const f = (p[2] - Rb) / ((p[2] - pn[2]) || 1e-9);
+        land = { t: t + f * dt, x: p[0] + f * (pn[0] - p[0]), y: p[1] + f * (pn[1] - p[1]), speed: V.norm(v) };
+        T.push(land.t); X.push(land.x); Y.push(land.y); Z.push(Rb);
+        break;
+      }
+      p = pn; v = vn; t += dt;
+      T.push(t); X.push(p[0]); Y.push(p[1]); Z.push(p[2]);
+      if (p[2] > apex.z) apex = { t, x: p[0], y: p[1], z: p[2] };
+    }
+    return { T, X, Y, Z, apex, land, launch };
+  }
+  const lerpAt = (arr, i, f) => arr[i - 1] + f * (arr[i] - arr[i - 1]);
+  // Estado al cruzar la distancia x (null si bota antes).
+  function flightAtX(tr, x) {
+    if (!tr) return null;
+    if (x <= 0) return { t: 0, x: 0, y: 0, z: tr.Z[0] };
+    const X = tr.X;
+    for (let i = 1; i < X.length; i++) if (X[i] >= x) { const f = (x - X[i - 1]) / ((X[i] - X[i - 1]) || 1e-9); return { t: lerpAt(tr.T, i, f), x, y: lerpAt(tr.Y, i, f), z: lerpAt(tr.Z, i, f) }; }
+    return null;
+  }
+  // Posición en el instante t (se queda en el final si t es mayor).
+  function flightAtT(tr, t) {
+    const T = tr.T, n = T.length;
+    if (t <= 0) return { t: 0, x: tr.X[0], y: tr.Y[0], z: tr.Z[0], done: false };
+    if (t >= T[n - 1]) return { t: T[n - 1], x: tr.X[n - 1], y: tr.Y[n - 1], z: tr.Z[n - 1], done: true };
+    let lo = 1, hi = n - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (T[mid] >= t) hi = mid; else lo = mid + 1; }
+    const f = (t - T[lo - 1]) / ((T[lo] - T[lo - 1]) || 1e-9);
+    return { t, x: lerpAt(tr.X, lo, f), y: lerpAt(tr.Y, lo, f), z: lerpAt(tr.Z, lo, f), done: false };
+  }
+  // Ángulo de salida con el que el primer bote llega a los T segundos (bisección); null si no hay solución.
+  function fitLanding(launch, T, opts) {
+    const landT = (e) => { const tr = flight({ ...launch, elevDeg: e }, { ...(opts || {}), tMax: T + 3 }); return tr.land ? tr.land.t : Infinity; };
+    let lo = 1, hi = 60;
+    if (!(T > 0.15) || landT(lo) > T || landT(hi) < T) return null;
+    for (let i = 0; i < 24; i++) { const mid = (lo + hi) / 2; if (landT(mid) < T) lo = mid; else hi = mid; }
+    return (lo + hi) / 2;
+  }
+  // Trayectoria del chute analizado, la misma sin efecto y las variantes para la banda de incertidumbre.
+  function kickFlight(res, opts) {
+    if (!res || !res.ok || !res.launch) return null;
+    const L = res.launch, o = opts || {};
+    const main = flight(L, o);
+    const noSpin = flight({ speed: L.speed, elevDeg: L.elevDeg }, o);
+    const alts = (res.variants || []).map((v) => flight({ speed: L.speed, elevDeg: v.elevDeg, top: v.top, side: L.side, rifle: v.rifle }, o));
+    for (const f of [0.92, 1.08]) {
+      let e = L.elevDeg;
+      if (res.landFit) { const fe = fitLanding({ ...L, speed: L.speed * f }, res.landFit.flightS, o); if (fe != null) e = fe; }
+      alts.push(flight({ speed: L.speed * f, elevDeg: e, top: L.top, side: L.side, rifle: L.rifle }, o));
+    }
+    return { main, noSpin, alts };
+  }
+  // Altura mínima y máxima de las variantes al cruzar x (0 = ya ha botado).
+  function bandAtX(fl, x) {
+    let lo = Infinity, hi = -Infinity;
+    for (const tr of [fl.main].concat(fl.alts)) { const q = flightAtX(tr, x); const z = q ? q.z : 0; if (z < lo) lo = z; if (z > hi) hi = z; }
+    return [lo, hi];
+  }
+  // Lo que cambia el giro respecto al mismo chute sin efecto, a la distancia x (o donde bote el primero).
+  function spinEffect(fl, x) {
+    const xe = Math.min(x, fl.main.land ? fl.main.land.x : x, fl.noSpin.land ? fl.noSpin.land.x : x);
+    const a = flightAtX(fl.main, xe), b = flightAtX(fl.noSpin, xe);
+    if (!a || !b) return null;
+    return { x: xe, dz: a.z - b.z, dy: a.y - b.y, dt: a.t - b.t };
+  }
+  // Punto de golpeo: por dónde pasa la línea del impulso respecto al centro, visto desde detrás del tiro.
+  // I·ω = r × m·v, con I = (2/3)·m·R² (esfera hueca).  Devuelve metros: up (+ arriba), right (+ derecha).
+  function strikePoint(launch) {
+    if (!launch || !launch.speed) return null;
+    const k = (2 / 3) * PHYS.R * PHYS.R, e = (launch.elevDeg || 0) * Math.PI / 180, toRad = 2 * Math.PI / 60;
+    const wx = (launch.rifle || 0) * toRad, wy = (launch.top || 0) * toRad, wz = (launch.side || 0) * toRad;
+    const up = k * wy / launch.speed, right = k * (Math.cos(e) * wz - Math.sin(e) * wx) / launch.speed;
+    return { up, right, r: Math.hypot(up, right) };
   }
 
   // ------------------------------------------------------------------ utilidades de datos
@@ -809,20 +1220,673 @@
   return {
     UUID16, CMD, samplePeriodCommand, STATUS_BITS, describeStatus, N_SAMPLES, KICK_PROGRESS_THRESHOLD,
     Decoder, encodeType2, simulateKick, analyze, classify, PHYS, cdModel, clModel, V, toHex,
+    flight, flightAtX, flightAtT, kickFlight, bandAtX, spinEffect, strikePoint, fitLanding, setElevation, elevFromChord,
     samplesToB64, b64ToSamples, mulberry32,
   };
 });
 
 </script>
 <script>
-/* app.js — interfaz y Bluetooth de la app Smart Ball (Chrome + Web Bluetooth). */
+/* scene.js — dibujo en canvas: el campo con la trayectoria (tres vistas), el balón girando y el punto de golpeo.
+ * Mundo: x hacia el objetivo, y a la izquierda, z arriba; el balón sale del origen. */
+(function (root) {
+  'use strict';
+  const SB = root.SB, V = SB.V;
+  const C = {
+    sky: '#06281B', g1: '#0D6B45', g2: '#0B5F3D', chalk: '#F4F7F1', chalkDim: 'rgba(244,247,241,0.5)',
+    trace: '#FFD60A', traceDim: 'rgba(255,214,10,0.45)', band: 'rgba(255,214,10,0.15)',
+    wall: '#2F6FE0', wallHead: '#9DBDF7', shadow: 'rgba(3,20,13,0.42)', ink: '#0A1E16', ball: '#FFFFFF',
+  };
+  const FONT = '"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+  const GOAL_W = 7.32, GOAL_H = 2.44, WALL_X = 9.15, WALL_H = 1.8, RB = SB.PHYS.R;
+  const reducedMotion = () => !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const es = (x, d) => (x == null || !isFinite(x) ? '—' : x.toFixed(d == null ? 1 : d).replace('.', ','));
+
+  function fit(cv) {
+    if (!cv || !cv.getContext) return null;
+    let ctx = null;
+    try { ctx = cv.getContext('2d'); } catch (e) { ctx = null; }
+    if (!ctx) return null;
+    const dpr = Math.min(root.devicePixelRatio || 1, 3);
+    const w = cv.clientWidth || 320, h = cv.clientHeight || 200;
+    const pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+    if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    return { ctx, w, h };
+  }
+
+  // ------------------------------------------------------------------ escena del campo
+  class PitchScene {
+    constructor(canvas) {
+      this.cv = canvas; this.view = 'behind'; this.fl = null; this.meta = {};
+      this.goalDist = 20; this.showWall = true;
+      this.t = null;            // instante de la animación (s desde el golpeo); null = trayectoria completa
+      this.raf = 0; this.rate = 0.5; this.onEnd = null;
+    }
+    setContext(goalDist, showWall) { this.goalDist = goalDist; this.showWall = showWall; this.findCut(); this.draw(); }
+    // Dónde termina el dibujo: en la red si el balón entra en la portería, en la barrera si da en ella.
+    findCut() {
+      this.cut = null; this.camS = null;
+      const fl = this.fl; if (!fl) return;
+      const D = this.goalDist, m = fl.main;
+      let x = Infinity;
+      if (this.showWall && D >= WALL_X + 2) { const q = SB.flightAtX(m, WALL_X); if (q && Math.abs(q.y) < 1.2 && q.z < 1.72) x = WALL_X - 0.1; }
+      if (!isFinite(x)) { const g = SB.flightAtX(m, D); if (g && Math.abs(g.y) < GOAL_W / 2 - RB && g.z < GOAL_H - RB) x = D + 0.9; }
+      if (isFinite(x)) { const q = SB.flightAtX(m, x); if (q) this.cut = q; }
+    }
+    setView(v) { this.view = v; this.draw(); }
+    caption() { const D = this.goalDist; return this.showWall && D >= WALL_X + 2 ? `Falta a ${es(D, 0)} m, con barrera` : `Portería a ${es(D, 0)} m`; }
+    // fl: resultado de SB.kickFlight; meta: { recordedS, hitS (segundo impacto sin afinar), fitted }
+    setFlight(fl, meta) { this.stop(); this.fl = fl; this.meta = meta || {}; this.t = null; this.findCut(); this.draw(); }
+    endTime() { const m = this.fl.main; return Math.min(this.cut ? this.cut.t : m.T[m.T.length - 1], 6); }
+    cutX() { return this.cut ? this.cut.x : Infinity; }
+    stop() { if (this.raf) { cancelAnimationFrame(this.raf); this.raf = 0; } }
+    play() {
+      this.stop();
+      if (!this.fl) return;
+      if (reducedMotion() || typeof requestAnimationFrame !== 'function') { this.t = null; this.draw(); return; }
+      const end = this.endTime(), rate = Math.max(this.rate, end / 3.2);   // a cámara lenta, pero sin eternizarse
+      let last = null; this.t = 0;
+      const step = (ts) => {
+        if (last == null) last = ts;
+        this.t += (ts - last) / 1000 * rate; last = ts;
+        if (this.t >= end) { this.t = null; this.raf = 0; this.draw(); if (this.onEnd) this.onEnd(); return; }
+        this.draw();
+        this.raf = requestAnimationFrame(step);
+      };
+      this.raf = requestAnimationFrame(step);
+    }
+    // Instante fijado desde fuera (vídeo): t < 0 deja el balón en el punto de golpeo.
+    setTime(t) { this.stop(); this.t = t; this.draw(); }
+    draw() {
+      const f = fit(this.cv); if (!f) return;
+      if (this.view === 'side') this.drawSide(f.ctx, f.w, f.h);
+      else if (this.view === 'top') this.drawTop(f.ctx, f.w, f.h);
+      else this.drawBehind(f.ctx, f.w, f.h);
+    }
+    ballNow() {
+      if (!this.fl) return { x: 0, y: 0, z: RB, t: 0 };
+      if (this.t == null) {
+        if (this.cut) return { ...this.cut, rest: true };
+        const m = this.fl.main, n = m.T.length - 1; return { x: m.X[n], y: m.Y[n], z: m.Z[n], t: m.T[n], rest: true };
+      }
+      if (this.t <= 0) return { x: 0, y: 0, z: RB, t: 0 };
+      return SB.flightAtT(this.fl.main, Math.min(this.t, this.endTime()));
+    }
+    // Tramo medido (línea continua) y proyectado (discontinua): índices de corte de la trayectoria principal.
+    cutIndex(tr, tCut) { let i = 0; while (i < tr.T.length - 1 && tr.T[i] < tCut) i++; return i; }
+
+    // ---------- vista desde detrás (perspectiva)
+    camera(w, h) {
+      const key = w + 'x' + h + '/' + this.goalDist;
+      if (this.camS == null || this.camKey !== key) { this.camKey = key; this.camS = this.fitCamera(w, h); }
+      return this.makeCamera(w, h, this.camS);
+    }
+    makeCamera(w, h, s) {   // s = 1: encuadre normal; mayor: más lejos y más alta
+      const D = this.goalDist, l0 = [D * 0.5, 0.6, 0.3];
+      const look = [l0[0], l0[1], l0[2] + (s - 1) * 2.4];
+      const pos = V.add(look, V.mul(V.sub([-7.8, -4.6, 5.4], l0), s));
+      const fwd = V.unit(V.sub(look, pos)), right = V.unit(V.cross(fwd, [0, 0, 1])), up = V.cross(right, fwd);
+      const fov = 42 * Math.PI / 180;
+      return { pos, fwd, right, up, f: (h / 2) / Math.tan(fov / 2), cx: w / 2, cy: h / 2 };
+    }
+    fitCamera(w, h) {
+      const fl = this.fl; if (!fl) return 1;
+      const m = fl.main, end = this.endTime(), pts = [];
+      for (let i = 0; i < m.T.length; i += 4) { if (m.T[i] > end) break; pts.push([m.X[i], m.Y[i], m.Z[i]]); }
+      for (let s = 1; s < 2.75; s += 0.125) {
+        const cam = this.makeCamera(w, h, s);
+        if (pts.every((p) => { const P = this.proj(cam, p); return !P || (P[1] > 26 && P[0] > 10 && P[0] < w - 10); })) return s;
+      }
+      return 2.75;
+    }
+    proj(cam, p) {
+      const d = V.sub(p, cam.pos), z = V.dot(d, cam.fwd);
+      if (z < 0.3) return null;
+      return [cam.cx + cam.f * V.dot(d, cam.right) / z, cam.cy - cam.f * V.dot(d, cam.up) / z, z];
+    }
+    seg(ctx, cam, a, b) { // segmento 3D recortado contra el plano cercano
+      const near = 0.3, za = V.dot(V.sub(a, cam.pos), cam.fwd), zb = V.dot(V.sub(b, cam.pos), cam.fwd);
+      if (za < near && zb < near) return;
+      let p = a, q = b;
+      if (za < near) p = V.add(a, V.mul(V.sub(b, a), (near + 0.01 - za) / (zb - za)));
+      if (zb < near) q = V.add(b, V.mul(V.sub(a, b), (near + 0.01 - zb) / (za - zb)));
+      const P = this.proj(cam, p), Q = this.proj(cam, q);
+      if (!P || !Q) return;
+      ctx.moveTo(P[0], P[1]); ctx.lineTo(Q[0], Q[1]);
+    }
+    fillPoly(ctx, cam, pts) {
+      const near = 0.4, cs = pts.map((p) => { const d = V.sub(p, cam.pos); return [V.dot(d, cam.right), V.dot(d, cam.up), V.dot(d, cam.fwd)]; });
+      const out = [];
+      for (let i = 0; i < cs.length; i++) {
+        const a = cs[i], b = cs[(i + 1) % cs.length], ina = a[2] >= near, inb = b[2] >= near;
+        if (ina) out.push(a);
+        if (ina !== inb) { const f = (near - a[2]) / (b[2] - a[2]); out.push([a[0] + f * (b[0] - a[0]), a[1] + f * (b[1] - a[1]), near]); }
+      }
+      if (out.length < 3) return;
+      ctx.beginPath();
+      out.forEach((c, i) => { const sx = cam.cx + cam.f * c[0] / c[2], sy = cam.cy - cam.f * c[1] / c[2]; if (i) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy); });
+      ctx.closePath(); ctx.fill();
+    }
+    poly(ctx, cam, pts, close) {
+      for (let i = 0; i + 1 < pts.length; i++) this.seg(ctx, cam, pts[i], pts[i + 1]);
+      if (close && pts.length > 2) this.seg(ctx, cam, pts[pts.length - 1], pts[0]);
+    }
+    pitchLines(D) { // marcas reglamentarias del fondo, sobre z = 0; cada elemento es una polilínea
+      const L = [];
+      L.push([[D, -45, 0], [D, 45, 0]]);
+      for (const [dx, hw] of [[16.5, 20.16], [5.5, 9.16]]) L.push([[D, -hw, 0], [D - dx, -hw, 0], [D - dx, hw, 0], [D, hw, 0]]);
+      const a0 = Math.acos(5.5 / 9.15), arc = [];
+      for (let i = 0; i <= 24; i++) { const a = -a0 + 2 * a0 * i / 24; arc.push([D - 11 - 9.15 * Math.cos(a), 9.15 * Math.sin(a), 0]); }
+      L.push(arc);
+      const spot = [];
+      for (let i = 0; i <= 12; i++) { const a = 2 * Math.PI * i / 12; spot.push([D - 11 + 0.16 * Math.cos(a), 0.16 * Math.sin(a), 0]); }
+      L.push(spot);
+      return L;
+    }
+    drawBehind(ctx, w, h) {
+      const D = this.goalDist, cam = this.camera(w, h), fl = this.fl;
+      // cielo y césped
+      const hz = this.proj(cam, [5000, 0, 0]);
+      const hy = hz ? hz[1] : h * 0.3;
+      ctx.fillStyle = C.sky; ctx.fillRect(0, 0, w, hy + 1);
+      ctx.fillStyle = C.g2; ctx.fillRect(0, hy, w, h - hy);
+      const W = 5.5;
+      ctx.fillStyle = C.g1;
+      for (let k = -4; k < 12; k += 2) {       // franjas de siega, alineadas con la línea de gol
+        const x1 = D - k * W, x0 = x1 - W;
+        this.fillPoly(ctx, cam, [[x0, -70, 0], [x1, -70, 0], [x1, 70, 0], [x0, 70, 0]]);
+      }
+      ctx.fillStyle = C.sky; ctx.fillRect(0, 0, w, hy);   // por encima del horizonte no hay césped
+      // líneas
+      ctx.strokeStyle = 'rgba(244,247,241,0.88)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); for (const pl of this.pitchLines(D)) this.poly(ctx, cam, pl, false); ctx.stroke();
+      // portería
+      const hw = GOAL_W / 2;
+      ctx.strokeStyle = 'rgba(244,247,241,0.3)'; ctx.lineWidth = 1; ctx.beginPath();
+      for (let i = 0; i <= 6; i++) { const y = -hw + GOAL_W * i / 6; this.seg(ctx, cam, [D + 0.9, y, GOAL_H], [D + 2, y, 0]); this.seg(ctx, cam, [D, y, GOAL_H], [D + 0.9, y, GOAL_H]); }
+      for (const z of [0, 0.8, 1.6]) this.seg(ctx, cam, [D + 2 - z * 0.45, -hw, z], [D + 2 - z * 0.45, hw, z]);
+      for (const y of [-hw, hw]) { this.seg(ctx, cam, [D, y, GOAL_H], [D + 0.9, y, GOAL_H]); this.seg(ctx, cam, [D + 0.9, y, GOAL_H], [D + 2, y, 0]); this.seg(ctx, cam, [D, y, 0], [D + 2, y, 0]); }
+      ctx.stroke();
+      const drawFrame = () => {
+        ctx.strokeStyle = C.chalk; ctx.lineWidth = 2.4; ctx.setLineDash([]); ctx.beginPath();
+        this.poly(ctx, cam, [[D, -hw, 0], [D, -hw, GOAL_H], [D, hw, GOAL_H], [D, hw, 0]], false); ctx.stroke();
+      };
+
+      const main = fl ? fl.main : null;
+      const tNow = this.t, anim = tNow != null;
+      const cutX = this.cutX();
+      const drawPath = (from, to) => { // tramo de la trayectoria con x en [from, to)
+        if (!main) return;
+        const tCut = this.meta.recordedS == null ? Infinity : this.meta.recordedS;
+        const tEnd = anim ? Math.max(0, tNow) : Infinity;
+        // sombra en el suelo
+        ctx.strokeStyle = C.shadow; ctx.lineWidth = 2; ctx.setLineDash([]); ctx.beginPath();
+        let started = false;
+        for (let i = 0; i < main.T.length; i++) {
+          if (main.T[i] > tEnd || main.X[i] > cutX) break;
+          const x = main.X[i]; if (x < from || x >= to) { started = false; continue; }
+          const P = this.proj(cam, [x, main.Y[i], 0]); if (!P) { started = false; continue; }
+          if (!started) { ctx.moveTo(P[0], P[1]); started = true; } else ctx.lineTo(P[0], P[1]);
+        }
+        ctx.stroke();
+        for (const part of ['medido', 'proyectado']) {
+          ctx.strokeStyle = C.trace; ctx.lineWidth = part === 'medido' ? 3 : 2.2;
+          ctx.setLineDash(part === 'medido' ? [] : [5, 5]); ctx.beginPath(); started = false;
+          for (let i = 0; i < main.T.length; i++) {
+            const t = main.T[i]; if (t > tEnd || main.X[i] > cutX) break;
+            const inPart = part === 'medido' ? t <= tCut + 1e-9 : t >= tCut - 0.004;
+            const x = main.X[i];
+            if (!inPart || x < from || x >= to) { started = false; continue; }
+            const P = this.proj(cam, [x, main.Y[i], main.Z[i]]); if (!P) { started = false; continue; }
+            if (!started) { ctx.moveTo(P[0], P[1]); started = true; } else ctx.lineTo(P[0], P[1]);
+          }
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+      };
+      const drawGhost = () => {  // el mismo chute sin efecto
+        if (!fl || anim) return;
+        const g = fl.noSpin;
+        ctx.strokeStyle = C.chalkDim; ctx.lineWidth = 1.5; ctx.setLineDash([3, 5]); ctx.beginPath();
+        let started = false;
+        for (let i = 0; i < g.T.length; i += 2) {
+          const P = this.proj(cam, [g.X[i], g.Y[i], g.Z[i]]); if (!P) { started = false; continue; }
+          if (!started) { ctx.moveTo(P[0], P[1]); started = true; } else ctx.lineTo(P[0], P[1]);
+        }
+        ctx.stroke(); ctx.setLineDash([]);
+      };
+      const drawBall = (b) => {
+        const P = this.proj(cam, [b.x, b.y, b.z]), S = this.proj(cam, [b.x, b.y, 0]);
+        if (!P) return;
+        const r = Math.max(2.6, cam.f * RB * 2.1 / P[2]);
+        if (S) { ctx.fillStyle = C.shadow; ctx.beginPath(); ctx.ellipse(S[0], S[1], r * 1.05, r * 0.38, 0, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = C.ball; ctx.beginPath(); ctx.arc(P[0], P[1], r, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = C.ink; ctx.lineWidth = 1; ctx.stroke();
+      };
+      const drawWall = () => {
+        if (!this.showWall || D < WALL_X + 2) return;
+        ctx.strokeStyle = 'rgba(244,247,241,0.75)'; ctx.lineWidth = 1.2; ctx.beginPath();
+        this.seg(ctx, cam, [WALL_X, -1.7, 0], [WALL_X, 1.7, 0]); ctx.stroke();
+        for (const y of [-0.93, -0.31, 0.31, 0.93]) {
+          const B = this.proj(cam, [WALL_X, y, 0]), T = this.proj(cam, [WALL_X, y, 1.58]), H = this.proj(cam, [WALL_X, y, 1.69]);
+          if (!B || !T || !H) continue;
+          const s = cam.f / B[2], bw = 0.46 * s;
+          ctx.fillStyle = C.wall; ctx.beginPath();
+          const x0 = B[0] - bw / 2, y0 = T[1], hh = B[1] - T[1], rr = Math.min(bw * 0.3, 6);
+          ctx.moveTo(x0, y0 + hh); ctx.lineTo(x0, y0 + rr); ctx.quadraticCurveTo(x0, y0, x0 + rr, y0);
+          ctx.lineTo(x0 + bw - rr, y0); ctx.quadraticCurveTo(x0 + bw, y0, x0 + bw, y0 + rr); ctx.lineTo(x0 + bw, y0 + hh); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = C.wallHead; ctx.beginPath(); ctx.arc(H[0], H[1], 0.115 * s, 0, Math.PI * 2); ctx.fill();
+        }
+      };
+      this.text(ctx, this.caption(), 10, 17, 'left', C.chalkDim, 11);
+      const b = this.ballNow();
+      const land = main && main.land && !anim && main.land.x <= cutX ? main.land : null;
+      const drawLand = () => { // marca del bote
+        const ring = [];
+        for (let i = 0; i <= 20; i++) { const a = 2 * Math.PI * i / 20; ring.push([land.x + 0.45 * Math.cos(a), land.y + 0.45 * Math.sin(a), 0]); }
+        ctx.strokeStyle = C.trace; ctx.lineWidth = 1.6; ctx.beginPath(); this.poly(ctx, cam, ring, false); ctx.stroke();
+      };
+      drawGhost();
+      // de lejos a cerca: lo que queda detrás de la portería, el marco, hasta la barrera, la barrera y lo de delante
+      drawPath(D, Infinity);
+      if (land && land.x >= D) drawLand();
+      if (b.x >= D) drawBall(b);
+      drawFrame();
+      drawPath(WALL_X, D);
+      if (land && land.x < D) drawLand();
+      if (b.x >= WALL_X && b.x < D) drawBall(b);
+      // punto de golpeo
+      { const ring = []; for (let i = 0; i <= 16; i++) { const a = 2 * Math.PI * i / 16; ring.push([0.3 * Math.cos(a), 0.3 * Math.sin(a), 0]); }
+        ctx.strokeStyle = 'rgba(244,247,241,0.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); this.poly(ctx, cam, ring, false); ctx.stroke(); }
+      drawWall();
+      drawPath(-Infinity, WALL_X);
+      if (b.x < WALL_X) drawBall(b);
+    }
+
+    // ---------- utilidades de las vistas planas
+    reach() {
+      const fl = this.fl; if (!fl) return 0;
+      const m = fl.main; return m.land ? m.land.x : m.X[m.X.length - 1];
+    }
+    text(ctx, s, x, y, align, color, size) {
+      ctx.font = (size || 12) + 'px ' + FONT; ctx.textAlign = align || 'center'; ctx.fillStyle = color || C.chalk; ctx.fillText(s, x, y);
+    }
+
+    // ---------- vista lateral (perfil de alturas)
+    drawSide(ctx, w, h) {
+      const D = this.goalDist, fl = this.fl, main = fl ? fl.main : null;
+      const xmin = -1.5, xmax = Math.max(D + 3.5, Math.min(this.reach(), 70) + 2.5);
+      let zTop = 3.2;
+      if (fl) for (const tr of [fl.main, fl.noSpin].concat(fl.alts)) zTop = Math.max(zTop, tr.apex.z + 0.5);
+      zTop = Math.min(zTop, 14);
+      const padL = 12, padR = 12, padT = 24, padB = 30;
+      const sc = (w - padL - padR) / (xmax - xmin);
+      const vex = Math.max(1, Math.min(3, Math.floor(2 * (h - padT - padB) / (zTop * sc)) / 2));   // ampliación vertical
+      const gy = h - padB, X = (x) => padL + (x - xmin) * sc, Z = (z) => gy - z * sc * vex;
+      ctx.fillStyle = C.sky; ctx.fillRect(0, 0, w, gy);
+      ctx.fillStyle = C.g1; ctx.fillRect(0, gy, w, h - gy);
+      ctx.strokeStyle = C.chalk; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+      // referencias de altura
+      ctx.strokeStyle = 'rgba(244,247,241,0.12)'; ctx.lineWidth = 1;
+      for (let z = 1; z <= zTop; z++) { ctx.beginPath(); ctx.moveTo(0, Z(z)); ctx.lineTo(w, Z(z)); ctx.stroke(); }
+      this.text(ctx, '1 m', 4, Z(1) - 3, 'left', C.chalkDim, 10);
+      if (zTop >= 3) this.text(ctx, '3 m', 4, Z(3) - 3, 'left', C.chalkDim, 10);
+      // distancias
+      const taken = [];
+      const label = (x, s, strong) => { if (taken.some((t) => Math.abs(t - X(x)) < 30)) return; taken.push(X(x)); this.text(ctx, s, X(x), gy + 18, 'center', strong ? C.chalk : C.chalkDim, strong ? 12 : 11); };
+      if (this.showWall && D >= WALL_X + 2) {
+        ctx.fillStyle = C.wall; ctx.fillRect(X(WALL_X) - 3, Z(1.58), 6, Z(0) - Z(1.58));
+        ctx.fillStyle = C.wallHead; ctx.beginPath(); ctx.arc(X(WALL_X), Z(1.69), 3.4, 0, Math.PI * 2); ctx.fill();
+        label(WALL_X, 'barrera', true);
+      }
+      ctx.strokeStyle = C.chalk; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(X(D), Z(0)); ctx.lineTo(X(D), Z(GOAL_H)); ctx.lineTo(X(D + 0.9), Z(GOAL_H)); ctx.stroke();
+      ctx.strokeStyle = 'rgba(244,247,241,0.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(D + 0.9), Z(GOAL_H)); ctx.lineTo(X(D + 2), Z(0)); ctx.stroke();
+      label(D, es(D, 0) + ' m', true);
+      for (let x = 5; x < xmax - 1; x += 5) {
+        ctx.strokeStyle = C.chalkDim; ctx.beginPath(); ctx.moveTo(X(x), gy); ctx.lineTo(X(x), gy + 4); ctx.stroke();
+        label(x, String(x));
+      }
+      if (vex > 1) this.text(ctx, 'altura ampliada ×' + es(vex, vex % 1 ? 1 : 0), w - 8, 14, 'right', C.chalkDim, 11);
+      this.text(ctx, this.caption(), 8, 14, 'left', C.chalkDim, 11);
+      if (!fl) { this.ballSide(ctx, X(0), Z(RB)); return; }
+      const anim = this.t != null;
+      if (!anim) {
+        // margen por el ángulo de salida: las dos variantes extremas, en fino
+        let loT = null, hiT = null;
+        for (const tr of fl.alts) { if (!loT || tr.apex.z < loT.apex.z) loT = tr; if (!hiT || tr.apex.z > hiT.apex.z) hiT = tr; }
+        if (loT && hiT && hiT.apex.z - loT.apex.z > 0.3) {
+          ctx.strokeStyle = C.traceDim; ctx.lineWidth = 1.3;
+          for (const tr of [loT, hiT]) {
+            ctx.beginPath();
+            for (let i = 0; i < tr.T.length; i++) { if (tr.X[i] > xmax) break; if (i) ctx.lineTo(X(tr.X[i]), Z(tr.Z[i])); else ctx.moveTo(X(tr.X[i]), Z(tr.Z[i])); }
+            ctx.stroke();
+          }
+        }
+        // sin efecto
+        const g = fl.noSpin; ctx.strokeStyle = C.chalkDim; ctx.lineWidth = 1.5; ctx.setLineDash([3, 5]); ctx.beginPath();
+        for (let i = 0; i < g.T.length; i++) { if (g.X[i] > xmax) break; if (i) ctx.lineTo(X(g.X[i]), Z(g.Z[i])); else ctx.moveTo(X(g.X[i]), Z(g.Z[i])); }
+        ctx.stroke(); ctx.setLineDash([]);
+      }
+      const tCut = this.meta.recordedS == null ? Infinity : this.meta.recordedS, tEnd = anim ? Math.max(0, this.t) : Infinity;
+      for (const part of ['medido', 'proyectado']) {
+        ctx.strokeStyle = C.trace; ctx.lineWidth = part === 'medido' ? 3 : 2.2; ctx.setLineDash(part === 'medido' ? [] : [5, 5]); ctx.beginPath();
+        let started = false;
+        for (let i = 0; i < main.T.length; i++) {
+          const t = main.T[i]; if (t > tEnd || main.X[i] > xmax || main.X[i] > this.cutX()) break;
+          if (!(part === 'medido' ? t <= tCut + 1e-9 : t >= tCut - 0.004)) { started = false; continue; }
+          if (!started) { ctx.moveTo(X(main.X[i]), Z(main.Z[i])); started = true; } else ctx.lineTo(X(main.X[i]), Z(main.Z[i]));
+        }
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      if (!anim) {
+        const ap = main.apex;
+        if (ap.x < xmax && ap.x <= this.cutX()) { ctx.fillStyle = C.trace; ctx.beginPath(); ctx.arc(X(ap.x), Z(ap.z), 3, 0, Math.PI * 2); ctx.fill(); this.text(ctx, es(ap.z) + ' m', X(ap.x), Z(ap.z) - 8, 'center', C.chalk, 12); }
+        if (main.land && main.land.x < xmax && main.land.x <= this.cutX()) { ctx.strokeStyle = C.trace; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(X(main.land.x), gy, 6, 2.4, 0, 0, Math.PI * 2); ctx.stroke(); }
+        if (this.meta.hitS != null) { const q = SB.flightAtT(main, this.meta.hitS); if (q.x < xmax && q.x <= this.cutX()) { ctx.strokeStyle = C.chalk; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(X(q.x), Z(q.z), 5, 0, Math.PI * 2); ctx.stroke(); } }
+      }
+      const b = this.ballNow();
+      ctx.strokeStyle = C.chalkDim; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(X(0), Z(RB), 4.2, 0, Math.PI * 2); ctx.stroke();
+      if (b.x <= xmax) this.ballSide(ctx, X(b.x), Z(b.z));
+    }
+    ballSide(ctx, x, y) { ctx.fillStyle = C.ball; ctx.beginPath(); ctx.arc(x, y, 4.2, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = C.ink; ctx.lineWidth = 1; ctx.stroke(); }
+
+    // ---------- vista desde arriba
+    drawTop(ctx, w, h) {
+      const D = this.goalDist, fl = this.fl, main = fl ? fl.main : null;
+      const xmin = -2, xmax = Math.max(D + 4, Math.min(this.reach(), 70) + 2.5);
+      const sc = w / (xmax - xmin), cy = h / 2;
+      const X = (x) => (x - xmin) * sc, Y = (y) => cy - y * sc;
+      ctx.fillStyle = C.g2; ctx.fillRect(0, 0, w, h);
+      for (let k = -2; k < 16; k += 2) { const x1 = D - k * 5.5, x0 = x1 - 5.5; ctx.fillStyle = C.g1; ctx.fillRect(X(x0), 0, 5.5 * sc, h); }
+      ctx.strokeStyle = 'rgba(244,247,241,0.88)'; ctx.lineWidth = 1.5; ctx.beginPath();
+      for (const pl of this.pitchLines(D)) { pl.forEach((p, i) => { if (i) ctx.lineTo(X(p[0]), Y(p[1])); else ctx.moveTo(X(p[0]), Y(p[1])); }); }
+      ctx.stroke();
+      const hw = GOAL_W / 2;
+      ctx.strokeStyle = 'rgba(244,247,241,0.35)'; ctx.lineWidth = 1; ctx.strokeRect(X(D), Y(hw), 2 * sc, GOAL_W * sc);
+      ctx.fillStyle = C.chalk; for (const y of [-hw, hw]) { ctx.beginPath(); ctx.arc(X(D), Y(y), 3, 0, Math.PI * 2); ctx.fill(); }
+      if (this.showWall && D >= WALL_X + 2) { ctx.strokeStyle = C.wall; ctx.lineWidth = 6; ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(X(WALL_X), Y(-1.16)); ctx.lineTo(X(WALL_X), Y(1.16)); ctx.stroke(); ctx.lineCap = 'round'; }
+      { const cap = this.caption(); ctx.font = '11px ' + FONT; const tw = ctx.measureText(cap).width;
+        ctx.fillStyle = 'rgba(6,40,27,0.78)'; ctx.fillRect(0, 0, tw + 16, 22); this.text(ctx, cap, 8, 15, 'left', 'rgba(244,247,241,0.72)', 11); }
+      // línea de salida (sin efecto no se desvía)
+      ctx.strokeStyle = C.chalkDim; ctx.lineWidth = 1.5; ctx.setLineDash([3, 5]); ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(xmax), Y(0)); ctx.stroke(); ctx.setLineDash([]);
+      if (!fl) { this.ballSide(ctx, X(0), Y(0)); return; }
+      const anim = this.t != null, tCut = this.meta.recordedS == null ? Infinity : this.meta.recordedS, tEnd = anim ? Math.max(0, this.t) : Infinity;
+      for (const part of ['medido', 'proyectado']) {
+        ctx.strokeStyle = C.trace; ctx.lineWidth = part === 'medido' ? 3 : 2.2; ctx.setLineDash(part === 'medido' ? [] : [5, 5]); ctx.beginPath();
+        let started = false;
+        for (let i = 0; i < main.T.length; i++) {
+          const t = main.T[i]; if (t > tEnd || main.X[i] > xmax || main.X[i] > this.cutX()) break;
+          if (!(part === 'medido' ? t <= tCut + 1e-9 : t >= tCut - 0.004)) { started = false; continue; }
+          if (!started) { ctx.moveTo(X(main.X[i]), Y(main.Y[i])); started = true; } else ctx.lineTo(X(main.X[i]), Y(main.Y[i]));
+        }
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      if (!anim) {
+        if (main.land && main.land.x < xmax && main.land.x <= this.cutX()) { ctx.strokeStyle = C.trace; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(X(main.land.x), Y(main.land.y), 5, 0, Math.PI * 2); ctx.stroke(); }
+        const q = SB.flightAtX(main, D);
+        if (q && Math.abs(q.y) > 0.25) { // desvío al llegar a la portería
+          ctx.strokeStyle = C.chalk; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(X(D) - 7, Y(0)); ctx.lineTo(X(D) - 7, Y(q.y)); ctx.stroke();
+          this.text(ctx, es(Math.abs(q.y)) + ' m', X(D) - 12, q.y > 0 ? Y(0) + 16 : Y(0) - 8, 'right', C.chalk, 12);
+        }
+      }
+      const b = this.ballNow();
+      ctx.strokeStyle = C.chalkDim; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(X(0), Y(0), 4.2, 0, Math.PI * 2); ctx.stroke();
+      if (b.x <= xmax) this.ballSide(ctx, X(b.x), Y(b.y));
+    }
+  }
+
+  // ------------------------------------------------------------------ balón girando (visto desde detrás)
+  const PATCHES = (() => {
+    const ph = (1 + Math.sqrt(5)) / 2, cs = [];
+    for (const a of [-1, 1]) for (const b of [-1, 1]) { cs.push([0, a, b * ph]); cs.push([a, b * ph, 0]); cs.push([a * ph, 0, b]); }
+    return cs.map((c0) => {
+      const c = V.unit(c0), u = V.perp(c), v = V.cross(c, u), rho = 0.37, pts = [];
+      for (let j = 0; j < 5; j++) { const a = 2 * Math.PI * j / 5; pts.push(V.add(V.mul(c, Math.cos(rho)), V.mul(V.add(V.mul(u, Math.cos(a)), V.mul(v, Math.sin(a))), Math.sin(rho)))); }
+      return { c, pts };
+    });
+  })();
+  class SpinBall {
+    constructor(canvas) { this.cv = canvas; this.axis = null; this.rps = 0; this.angle = 0; this.raf = 0; this.last = null; }
+    // axis: vector unitario en el mundo (regla de la mano derecha) o null; rpm real; slow: cuántas veces más lento
+    set(axis, rpm, slow) {
+      this.axis = axis; this.rps = axis ? (rpm / 60) / (slow || 20) : 0; this.angle = 0; this.last = null;
+      this.stop(); this.draw();
+      if (axis && this.rps > 0.004 && !reducedMotion() && typeof requestAnimationFrame === 'function') {
+        const step = (ts) => {
+          if (!this.cv.isConnected) { this.raf = 0; return; }
+          if (this.last != null) this.angle += 2 * Math.PI * this.rps * Math.min(0.1, (ts - this.last) / 1000);
+          this.last = ts; this.draw(); this.raf = requestAnimationFrame(step);
+        };
+        this.raf = requestAnimationFrame(step);
+      }
+    }
+    stop() { if (this.raf) { cancelAnimationFrame(this.raf); this.raf = 0; } }
+    draw() {
+      const f = fit(this.cv); if (!f) return;
+      const { ctx, w, h } = f, cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.34;
+      const a = this.axis;
+      // eje (por detrás del balón): en pantalla x = −y del mundo, arriba = z
+      if (a) {
+        const ax = -a[1], ay = -a[2], len = Math.hypot(ax, ay);
+        ctx.strokeStyle = C.chalk; ctx.lineWidth = 2;
+        if (len > 0.3) {
+          const ux = ax / len, uy = ay / len, L = R * 1.36;
+          ctx.beginPath(); ctx.moveTo(cx - ux * L, cy - uy * L); ctx.lineTo(cx + ux * L, cy + uy * L); ctx.stroke();
+        }
+      }
+      ctx.save();
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fillStyle = C.ball; ctx.fill(); ctx.clip();
+      ctx.fillStyle = C.ink;
+      for (const p of PATCHES) {
+        const c = a ? V.rot(p.c, a, this.angle) : p.c;
+        if (c[0] > 0.3) continue;                       // cara oculta (x > 0 queda lejos del observador)
+        ctx.beginPath();
+        p.pts.forEach((q0, i) => { const q = a ? V.rot(q0, a, this.angle) : q0; const sx = cx - q[1] * R, sy = cy - q[2] * R; if (i) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy); });
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
+      if (a && Math.hypot(a[1], a[2]) <= 0.3) { // eje hacia el observador
+        ctx.strokeStyle = C.trace; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+  }
+
+  // ------------------------------------------------------------------ punto de golpeo (visto desde detrás)
+  function drawStrike(canvas, sp) {
+    const f = fit(canvas); if (!f) return;
+    const { ctx, w, h } = f, cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.34;
+    ctx.fillStyle = 'rgba(244,247,241,0.08)'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = C.chalk; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = 'rgba(244,247,241,0.35)'; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
+    ctx.beginPath(); ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy); ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R); ctx.stroke(); ctx.setLineDash([]);
+    if (!sp) return;
+    let dx = sp.right / RB, dy = sp.up / RB; const n = Math.hypot(dx, dy);
+    if (n > 0.86) { dx *= 0.86 / n; dy *= 0.86 / n; }
+    const px = cx + dx * R, py = cy - dy * R;
+    ctx.fillStyle = C.trace; ctx.beginPath(); ctx.arc(px, py, 7.5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.strokeStyle = C.traceDim; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px, py, 13, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  root.SBScene = { PitchScene, SpinBall, drawStrike, colors: C, es };
+})(typeof self !== 'undefined' ? self : this);
+
+</script>
+<script>
+/* video.js — cámara: graba cada chute (unos segundos antes y después), guarda el vídeo en el móvil
+ * y busca el sonido del golpeo para sincronizarlo con los datos del balón. */
+(function (root) {
+  'use strict';
+  const SLOT_MS = 6000;   // cada cuánto se renueva una de las dos grabaciones en curso
+  const POST_MS = 3000;   // cuánto se graba después del golpeo
+
+  const supported = () => !!(root.navigator && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && root.MediaRecorder);
+  function pickMime() {
+    const list = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+    for (const m of list) { try { if (MediaRecorder.isTypeSupported(m)) return m; } catch (e) { /* siguiente */ } }
+    return '';
+  }
+
+  class KickCam {
+    constructor(log) { this.stream = null; this.recs = []; this.timer = null; this.pending = null; this.log = log || (() => {}); this.fps = 30; this.hasAudio = false; this.mime = ''; this.onLost = null; }
+    get open() { return !!(this.stream && this.stream.getVideoTracks().some((t) => t.readyState === 'live')); }
+    get rolling() { return this.recs.length > 0; }
+    async start(opts) {
+      const o = opts || {};
+      if (this.open) return;
+      const video = { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: o.fps60 ? 60 : 30 } };
+      const audio = o.audio === false ? false : { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+      try { this.stream = await navigator.mediaDevices.getUserMedia({ video, audio }); }
+      catch (e) {
+        if (!audio) throw e;
+        this.log('Cámara con sonido no disponible (' + e.name + '): pruebo sin micrófono');
+        this.stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
+      }
+      const vt = this.stream.getVideoTracks()[0], st = vt.getSettings ? vt.getSettings() : {};
+      this.fps = Math.round(st.frameRate || 30); this.width = st.width; this.height = st.height;
+      this.hasAudio = this.stream.getAudioTracks().length > 0;
+      this.mime = pickMime();
+      vt.addEventListener('ended', () => { this.log('La cámara se ha detenido'); this.stopRolling(); if (this.onLost) this.onLost(); });
+      this.log(`Cámara: ${st.width}×${st.height} a ${this.fps} fps, sonido ${this.hasAudio ? 'sí' : 'no'}, formato ${this.mime || 'por defecto'}`);
+    }
+    close() {
+      this.stopRolling();
+      if (this.stream) this.stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) { /* nada */ } });
+      this.stream = null;
+    }
+    attach(el) { if (!el) return; el.srcObject = this.stream; el.muted = true; const p = el.play && el.play(); if (p && p.catch) p.catch(() => {}); }
+    _rec() {
+      const opt = { videoBitsPerSecond: 3500000 }; if (this.mime) opt.mimeType = this.mime;
+      const r = new MediaRecorder(this.stream, opt);
+      const rec = { r, chunks: [], wall: Date.now() };
+      r.ondataavailable = (e) => { if (e.data && e.data.size) rec.chunks.push(e.data); };
+      r.onerror = (e) => this.log('Error de grabación: ' + ((e.error && e.error.name) || e.type));
+      r.start();
+      return rec;
+    }
+    _drop(rec) { try { rec.r.ondataavailable = null; if (rec.r.state !== 'inactive') rec.r.stop(); } catch (e) { /* nada */ } }
+    // Dos grabaciones solapadas que se renuevan por turnos: en cualquier momento hay una con 6–12 s de antelación
+    // (margen para cuando el aviso del chute llega tarde porque el balón se ha ido fuera de alcance).
+    startRolling() {
+      if (!this.open || this.rolling) return false;
+      this.pending = null;
+      try { this.recs = [this._rec()]; } catch (e) { this.log('No se puede grabar: ' + e.message); this.recs = []; return false; }
+      this.timer = setInterval(() => {
+        if (this.pending) return;
+        try {
+          if (this.recs.length >= 2) this._drop(this.recs.shift());
+          this.recs.push(this._rec());
+        } catch (e) { this.log('Grabación continua: ' + e.message); }
+      }, SLOT_MS);
+      return true;
+    }
+    stopRolling() {
+      if (this.timer) clearInterval(this.timer); this.timer = null;
+      if (!this.pending) { this.recs.forEach((r) => this._drop(r)); this.recs = []; }
+    }
+    // Cierra el clip: kickWall = instante (Date.now) en que se supo del chute. Devuelve una promesa con el clip.
+    markKick(kickWall) {
+      if (this.pending) return this.pending;
+      if (!this.rolling) return Promise.resolve(null);
+      if (this.timer) clearInterval(this.timer); this.timer = null;
+      const rec = this.recs[0];
+      this.recs.slice(1).forEach((r) => this._drop(r));
+      this.recs = [rec];
+      this.pending = new Promise((resolve) => {
+        const finish = () => {
+          const type = (rec.r.mimeType || this.mime || 'video/webm').split(';')[0];
+          const blob = new Blob(rec.chunks, { type });
+          this.recs = []; this.pending = null;
+          resolve(blob.size > 2000 ? { blob, mime: type, kickOffsetMs: Math.max(0, kickWall - rec.wall), durationMs: Date.now() - rec.wall, fps: this.fps, width: this.width, height: this.height, hasAudio: this.hasAudio } : null);
+        };
+        setTimeout(() => {
+          try { rec.r.onstop = finish; if (rec.r.state !== 'inactive') rec.r.stop(); else finish(); } catch (e) { this.log('Cierre del vídeo: ' + e.message); this.recs = []; this.pending = null; resolve(null); }
+        }, Math.max(0, POST_MS - (Date.now() - kickWall)));
+      });
+      return this.pending;
+    }
+  }
+
+  // ------------------------------------------------------------------ sonido del golpeo
+  // Busca el chasquido del golpeo cerca del instante estimado (el aviso por Bluetooth llega 0,1–0,4 s después).
+  async function findImpactSound(blob, guessMs) {
+    const OAC = root.OfflineAudioContext || root.webkitOfflineAudioContext;
+    if (!OAC || !blob || !blob.arrayBuffer) return null;
+    try {
+      const ctx = new OAC(1, 44100, 44100);
+      const data = await blob.arrayBuffer();
+      const buf = await new Promise((res, rej) => { const p = ctx.decodeAudioData(data, res, rej); if (p && p.catch) p.catch(rej); });
+      const ch = buf.getChannelData(0), sr = buf.sampleRate, hop = Math.max(1, Math.round(sr * 0.002)), n = Math.floor(ch.length / hop);
+      const env = new Float32Array(n);
+      for (let i = 0; i < n; i++) { let m = 0; for (let j = 0; j < hop; j++) { const v = Math.abs(ch[i * hop + j]); if (v > m) m = v; } env[i] = m; }
+      const hopMs = 1000 * hop / sr;
+      const i0 = Math.max(40, Math.floor((guessMs - 900) / hopMs)), i1 = Math.min(n - 1, Math.ceil((guessMs + 150) / hopMs));
+      if (i1 - i0 < 20) return null;
+      const win = Array.from(env.subarray(i0, i1)).sort((a, b) => a - b), floor = win[Math.floor(win.length / 2)] || 0;
+      let best = -1, bestScore = 0;
+      for (let i = i0; i < i1; i++) {
+        let prev = 0; for (let k = 4; k <= 30; k++) prev = Math.max(prev, env[i - k]);
+        const score = env[i] - 1.6 * prev;                 // subida brusca respecto a los 60 ms anteriores
+        if (score > bestScore) { bestScore = score; best = i; }
+      }
+      if (best < 0 || env[best] < 0.04 || env[best] < 5 * floor) return null;
+      return { ms: best * hopMs, peak: env[best], floor };
+    } catch (e) { return null; }
+  }
+
+  // ------------------------------------------------------------------ almacén de vídeos (IndexedDB)
+  const ClipStore = {
+    _db: null,
+    available() { return !!root.indexedDB; },
+    open() {
+      if (this._db) return Promise.resolve(this._db);
+      if (!this.available()) return Promise.resolve(null);
+      return new Promise((resolve) => {
+        let req;
+        try { req = indexedDB.open('smartball', 1); } catch (e) { resolve(null); return; }
+        req.onupgradeneeded = () => { req.result.createObjectStore('clips', { keyPath: 'id' }); };
+        req.onsuccess = () => { this._db = req.result; resolve(this._db); };
+        req.onerror = () => resolve(null);
+      });
+    },
+    async _tx(mode, fn) {
+      const db = await this.open(); if (!db) return null;
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('clips', mode), req = fn(tx.objectStore('clips'));
+          tx.oncomplete = () => resolve(req ? req.result : true);
+          tx.onerror = () => resolve(null); tx.onabort = () => resolve(null);
+        } catch (e) { resolve(null); }
+      });
+    },
+    put(id, clip) { return this._tx('readwrite', (s) => s.put({ id, blob: clip.blob, mime: clip.mime })); },
+    get(id) { return this._tx('readonly', (s) => s.get(id)); },
+    del(id) { return this._tx('readwrite', (s) => s.delete(id)); },
+    clear() { return this._tx('readwrite', (s) => s.clear()); },
+    keys() { return this._tx('readonly', (s) => s.getAllKeys()); },
+  };
+
+  root.SBVideo = { KickCam, ClipStore, findImpactSound, supported, POST_MS, SLOT_MS };
+})(typeof self !== 'undefined' ? self : this);
+
+</script>
+<script>
+/* app.js — interfaz, Bluetooth y cámara de la app Smart Ball (Chrome + Web Bluetooth). */
 (() => {
   'use strict';
   const $ = (s) => document.querySelector(s);
-  const U = SB.UUID16;
-  const VERSION = '1.0.1';
+  const U = SB.UUID16, es = SBScene.es;
+  const VERSION = '2.0';
+  const ANALYSIS = 2;   // sube cuando cambia el análisis: los chutes guardados se recalculan
   const STORE_KEY = 'smartball.v1.kicks';
   const SETTINGS_KEY = 'smartball.v1.settings';
+  const WALL_X = 9.15, BAR_H = 2.44, POST_Y = 3.66;
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const hex = (b) => SB.toHex(b);
 
@@ -837,10 +1901,10 @@
     if (el && d && d.open) el.textContent = logLines.slice(-400).join('\n');
   }
   window.addEventListener('error', (e) => log('ERROR JS: ' + e.message));
-  window.addEventListener('unhandledrejection', (e) => log('ERROR promesa: ' + (e.reason && e.reason.message || e.reason)));
+  window.addEventListener('unhandledrejection', (e) => log('ERROR promesa: ' + ((e.reason && e.reason.message) || e.reason)));
 
   // ------------------------------------------------------------ ajustes y almacenamiento
-  let settings = { sound: true, speak: true, vibrate: true };
+  const settings = { sound: true, speak: true, vibrate: true, cam: false, cam60: false, camAudio: true, openField: false, goalDist: 20, wall: true, view: 'behind' };
   try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch (e) { /* sin almacenamiento */ }
   const saveSettings = () => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) { /* nada */ } };
   function loadKicks() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { return []; } }
@@ -860,7 +1924,7 @@
     return actx;
   }
   function tone(freq, start, dur, gain, type) {
-    const a = audio(); if (!a) return;
+    const a = audio(); if (!a) return null;
     const o = a.createOscillator(), g = a.createGain();
     o.type = type || 'sine'; o.frequency.value = freq;
     const t0 = a.currentTime + start;
@@ -959,15 +2023,15 @@
 
   // ------------------------------------------------------------ transporte: balón simulado (modo demostración)
   const PRESETS = [
-    { label: 'liftado', o: { top: 1, side: 0.1, rifle: 0 }, rpm: [420, 720], v: [22, 29], e: [10, 18] },
-    { label: 'cortado', o: { top: -1, side: 0.15, rifle: 0 }, rpm: [300, 520], v: [18, 25], e: [18, 30] },
+    { label: 'liftado', o: { top: 1, side: 0.1, rifle: 0 }, rpm: [420, 720], v: [22, 29], e: [12, 20] },
+    { label: 'cortado', o: { top: -1, side: 0.15, rifle: 0 }, rpm: [300, 520], v: [18, 25], e: [16, 26] },
     { label: 'rosca con el interior (diestro)', o: { top: -0.35, side: 0.9, rifle: 0.15 }, rpm: [450, 650], v: [21, 27], e: [14, 22] },
     { label: 'rosca con el exterior (diestro)', o: { top: 0.2, side: -0.9, rifle: 0.1 }, rpm: [350, 550], v: [22, 28], e: [12, 20] },
-    { label: 'liftado con rosca', o: { top: 0.75, side: 0.6, rifle: 0 }, rpm: [450, 700], v: [22, 28], e: [12, 20] },
-    { label: 'knuckle', o: { top: 0.3, side: 0.2, rifle: 1 }, rpm: [15, 45], v: [28, 33], e: [8, 14] },
+    { label: 'liftado con rosca', o: { top: 0.75, side: 0.6, rifle: 0 }, rpm: [450, 700], v: [22, 28], e: [14, 22] },
+    { label: 'sin giro', o: { top: 0.3, side: 0.2, rifle: 1 }, rpm: [15, 45], v: [28, 33], e: [8, 14] },
   ];
   class MockTransport {
-    constructor() { this.cb = {}; this.state = 'idle'; this.pct = 0; this.on = false; this.timers = []; this.kickData = null; this.lastTruth = null; this.onDisconnect = null; this.isDemo = true; }
+    constructor() { this.cb = {}; this.state = 'idle'; this.pct = 0; this.on = false; this.timers = []; this.kickData = null; this.lastTruth = null; this.onDisconnect = null; this.isDemo = true; this.count = 0; }
     get name() { return 'Balón simulado'; }
     get connected() { return this.on; }
     async request() { /* nada que elegir */ }
@@ -1003,7 +2067,7 @@
     kick() {
       if (this.state !== 'ready') return;
       this.state = 'recording';
-      const p = PRESETS[Math.floor(Math.random() * PRESETS.length)];
+      const p = PRESETS[this.count++ % PRESETS.length];
       const rnd = (r) => r[0] + Math.random() * (r[1] - r[0]);
       const sim = SB.simulateKick({ seed: Math.floor(Math.random() * 1e9), speed: rnd(p.v), rpm: rnd(p.rpm), elevDeg: rnd(p.e), ...p.o });
       this.kickData = sim.samples;
@@ -1026,13 +2090,22 @@
     disconnect() { this.clear(); if (this.on) { this.on = false; if (this.onDisconnect) this.onDisconnect(); } }
   }
 
-  // ------------------------------------------------------------ sesión y flujo del chute
-  const S = { t: null, state: 'disconnected', info: {}, pollGen: 0, lastPct: 0, hasProgress: true, checkingZero: false, autoRetried: false, decoder: new SB.Decoder(), samplePeriodMs: 1, pendingDownload: false, reconnecting: false, dlWatch: null, finishTimer: null, manualDisconnect: false, current: null };
+  // ------------------------------------------------------------ sesión
+  const S = {
+    t: null, state: 'disconnected', info: {}, decoder: new SB.Decoder(), samplePeriodMs: 1,
+    pollGen: 0, lastPct: 0, lastPollOk: 0, hasProgress: true, checkingZero: false, autoRetried: false,
+    pendingDownload: false, maybeKick: false, reconnecting: false, dlWatch: null, finishTimer: null, stallTimer: null, manualDisconnect: false,
+    cam: new SBVideo.KickCam(log), clipPromise: null, kickWall: 0, provisional: false, framing: false,
+    current: null, currentRes: null, fl: null,
+  };
+  const scene = new SBScene.PitchScene($('#scene'));
+  const spinBall = new SBScene.SpinBall($('#spinCanvas'));
+  scene.goalDist = settings.goalDist; scene.showWall = settings.wall; scene.view = settings.view;
 
   async function connect(acceptAll, demo) {
     audio();
     if (S.t) { S.manualDisconnect = true; S.t.disconnect(); }
-    S.manualDisconnect = false;
+    S.manualDisconnect = false; S.pendingDownload = false; S.maybeKick = false;
     S.t = demo ? new MockTransport() : new BleTransport();
     S.t.onDisconnect = onDisconnect;
     setState('connecting');
@@ -1057,11 +2130,29 @@
       try { await S.t.notify('RATE', (b) => log('AD20 ← ' + hex(b))); } catch (e) { /* opcional */ }
       await readInfo();
       keepAwake();
-      if (S.pendingDownload) { setState('idle'); toast('Reconectado. Descargo el último chute.'); await downloadNow(true); }
+      if (S.maybeKick) {       // se perdió la conexión con el balón armado: ¿llegó a grabar un chute?
+        S.maybeKick = false;
+        let pct = S.hasProgress ? 0 : 100;
+        if (S.hasProgress) {   // la grabación dura 1,1 s: si el corte fue justo al golpear, el % aún puede ir bajo
+          const t0 = Date.now();
+          for (;;) {
+            try { pct = (await S.t.read('PROG'))[0]; } catch (e) { pct = 0; break; }
+            if (pct >= SB.KICK_PROGRESS_THRESHOLD || Date.now() - t0 > (pct > 0 ? 1500 : 450)) break;
+            await sleep(60);
+          }
+        }
+        log('Tras reconectar, AD33 = ' + pct + ' %');
+        if (pct >= SB.KICK_PROGRESS_THRESHOLD) {
+          S.pendingDownload = true;
+          const t0 = Date.now();                 // por si la grabación (1,1 s) aún no ha terminado
+          while (S.hasProgress && pct < 100 && Date.now() - t0 < 1800) { await sleep(120); try { pct = (await S.t.read('PROG'))[0]; } catch (e) { break; } }
+        } else { dropClip(); setState('idle'); toast('El balón no llegó a registrar ningún chute. Prepáralo otra vez.'); return; }
+      }
+      if (S.pendingDownload) { setState('idle'); S.autoRetried = false; await downloadNow(true); }
       else setState('idle');
     } catch (e) {
       if (quiet) log('Reconexión: ' + ((e && e.message) || e)); else showError(e);
-      setState(S.pendingDownload ? 'needReconnect' : 'disconnected');
+      setState(S.pendingDownload || S.maybeKick ? 'needReconnect' : 'disconnected');
     }
   }
 
@@ -1076,26 +2167,62 @@
     b = await tryRead('FW'); if (b) info.firmware = dec.decode(b).replace(/\0/g, '');
     b = await tryRead('MFR'); if (b) info.manufacturer = dec.decode(b).replace(/\0/g, '');
     S.info = info;
-    renderInfo();
+    renderConn();
   }
 
+  // ------------------------------------------------------------ cámara
+  function camError(e) {
+    const n = e && e.name;
+    if (n === 'NotAllowedError' || n === 'SecurityError') return 'Chrome no tiene permiso para usar la cámara. Toca el candado de la barra de direcciones y permite «Cámara».';
+    if (n === 'NotFoundError' || n === 'OverconstrainedError') return 'No encuentro ninguna cámara en este dispositivo.';
+    if (n === 'NotReadableError') return 'Otra aplicación está usando la cámara.';
+    return 'No he podido abrir la cámara (' + ((e && e.message) || n) + ').';
+  }
+  async function ensureCam() {
+    if (!S.cam.open) await S.cam.start({ fps60: settings.cam60, audio: settings.camAudio });
+    S.cam.attach($('#preview'));
+  }
+  async function toggleCam() {
+    audio();
+    if (!settings.cam) {
+      try { await ensureCam(); } catch (e) { toast(camError(e)); return; }
+      settings.cam = true; saveSettings(); S.framing = true;
+      if (['waitingReady', 'ready'].includes(S.state)) S.cam.startRolling();
+      toast('Vídeo activado. Encuadra el chute: grabaré solo unos segundos antes y después de cada uno.');
+    } else {
+      settings.cam = false; saveSettings(); S.framing = false; S.cam.close();
+    }
+    renderDock(); refreshStage();
+  }
+  S.cam.onLost = () => { S.framing = false; refreshStage(); };
+  function dropClip() { const p = S.clipPromise; S.clipPromise = null; S.provisional = false; if (p) p.catch(() => {}); S.cam.stopRolling(); }
+
+  // ------------------------------------------------------------ flujo del chute
   async function arm() {
     if (!S.t || !S.t.connected) return;
+    audio();
     clearDownloadTimers();
-    S.pendingDownload = false;
+    S.pendingDownload = false; S.maybeKick = false;
     S.decoder.reset();
     S.pollGen++; S.lastPct = 0; S.checkingZero = false;
+    dropClip();
     setState('arming');
+    if (settings.cam) {
+      try { await ensureCam(); S.cam.startRolling(); }
+      catch (e) { toast('Este chute irá sin vídeo. ' + camError(e)); }
+      refreshStage();
+    }
     try {
       await S.t.write('CMD', SB.CMD.RESET);
       await sleep(250);
       await S.t.write('CMD', SB.CMD.START_LOGGING);
       setState('waitingReady');
-    } catch (e) { showError(e); setState(S.t.connected ? 'idle' : 'disconnected'); }
+    } catch (e) { showError(e); dropClip(); setState(S.t.connected ? 'idle' : 'disconnected'); }
   }
 
   async function cancelArm() {
     S.pollGen++;
+    dropClip();
     try { await S.t.write('CMD', SB.CMD.RESET); } catch (e) { log('Reset al cancelar: ' + e.message); }
     setState('idle');
   }
@@ -1106,6 +2233,7 @@
     if (v === 1 && S.state === 'waitingReady') {
       setState('ready');
       whistle(); buzz([180, 90, 180]); setTimeout(() => say('Listo'), 900);
+      startStallWatch();
       pollProgress();
     } else if (v === 0 && S.state === 'ready') {
       // Un 0 con el balón armado puede ser «chute» (así lo interpreta la app de la USC) o que el balón
@@ -1125,7 +2253,7 @@
       if (S.state !== 'ready' || !S.t || !S.t.connected) return; // el sondeo ya detectó el chute
       if (S.lastPct > 0) return;                           // está grabando: el sondeo lo recogerá
       log('AD14=0 sin grabación: se rearma');
-      setState('waitingReady', 'Se ha movido. Déjalo quieto otra vez…');
+      setState('waitingReady', 'Se ha movido. Déjalo quieto otra vez.');
       await S.t.write('CMD', SB.CMD.START_LOGGING);
     } catch (e) { showError(e); } finally { S.checkingZero = false; }
   }
@@ -1143,14 +2271,36 @@
         await sleep(200); continue;
       }
       if (gen !== S.pollGen) return;
+      S.lastPollOk = Date.now();
       if (pct !== S.lastPct) log('AD33 = ' + pct + ' %');
       S.lastPct = pct;
       if (pct >= SB.KICK_PROGRESS_THRESHOLD && S.state === 'ready') { S.pollGen++; onKick(); return; }
+      if (S.provisional && pct === 0) {   // falsa alarma: el balón sigue ahí y no ha grabado nada
+        log('El balón responde y no hay chute: sigo grabando vídeo');
+        const p = S.clipPromise; S.clipPromise = null; S.provisional = false;
+        if (p) p.then(() => { if (settings.cam && ['ready', 'waitingReady'].includes(S.state)) S.cam.startRolling(); });
+      }
       await sleep(30);
     }
   }
+  // Si el balón deja de responder con el chute armado, lo más probable es que haya salido volando fuera de
+  // alcance: se cierra el vídeo en torno a ese instante sin esperar a que el móvil dé la conexión por perdida.
+  function startStallWatch() {
+    stopStallWatch(); S.lastPollOk = Date.now();
+    S.stallTimer = setInterval(() => {
+      if (S.state !== 'ready') { stopStallWatch(); return; }
+      if (!S.clipPromise && S.cam.rolling && Date.now() - S.lastPollOk > 1500) {
+        log('El balón no responde desde hace 1,5 s: posible chute, cierro el vídeo');
+        S.kickWall = S.lastPollOk + 150; S.provisional = true;
+        S.clipPromise = S.cam.markKick(S.kickWall);
+      }
+    }, 300);
+  }
+  function stopStallWatch() { if (S.stallTimer) clearInterval(S.stallTimer); S.stallTimer = null; }
 
   async function onKick() {
+    if (!S.clipPromise) { S.kickWall = Date.now(); S.clipPromise = S.cam.rolling ? S.cam.markKick(S.kickWall) : null; }
+    S.provisional = false;
     setState('kicked');
     beep(1300, 0.09); buzz(90);
     S.pendingDownload = true;
@@ -1176,7 +2326,11 @@
     setState('downloading');
     S.dlStart = Date.now(); S.lastPacket = 0;
     try {
-      if (afterReconnect) { await S.t.write('CMD', SB.CMD.RESET); await sleep(250); }
+      if (afterReconnect) {
+        try { await S.t.write('CMD', SB.CMD.STOP_LOGGING); } catch (e) { log('STOP: ' + e.message); }
+        await sleep(150);
+        await S.t.write('CMD', SB.CMD.RESET); await sleep(250);
+      }
       try { const r = await S.t.read('RATE'); const p = r[0] | ((r[1] || 0) << 8); S.samplePeriodMs = p >= 1 && p <= 20 ? p : 1; } catch (e) { log('AD20: ' + e.message); }
       await S.t.write('CMD', SB.CMD.DOWNLOAD);
     } catch (e) { showError(e); setState(S.t.connected ? 'needRetry' : 'needReconnect'); return; }
@@ -1201,34 +2355,75 @@
     if (S.state !== 'downloading') return;
     clearDownloadTimers();
     const samples = S.decoder.result();
-    log(`Descarga: ${samples.length} muestras, ${S.decoder.packets} paquetes, ${S.decoder.gaps} saltos de secuencia${timedOut ? ' (por tiempo)' : ''}`);
+    log(`Descarga: ${samples.length} muestras, ${S.decoder.packets} paquetes, ${S.decoder.gaps} saltos de secuencia${timedOut ? ' (por tiempo)' : ''}, ${Date.now() - S.dlStart} ms`);
     if (samples.length < 200) {
       if (S.t.connected && !S.autoRetried) { S.autoRetried = true; log('Descarga vacía: reintento automático'); downloadNow(true); return; }
       setState(S.t.connected ? 'needRetry' : 'needReconnect');
-      toast('No llegaron datos suficientes (' + samples.length + ' muestras). Acércate al balón y pulsa «Descargar otra vez».');
+      toast('No llegaron datos suficientes (' + samples.length + ' muestras). Acerca el balón y pulsa «Descargar otra vez».');
       return;
     }
     S.pendingDownload = false;
-    const res = SB.analyze(samples, S.samplePeriodMs / 1000);
     const kick = {
       id: Date.now(), at: new Date().toISOString(), dtMs: S.samplePeriodMs, n: samples.length,
       gaps: S.decoder.gaps, partial: !!timedOut && samples.length < 1000, tag: '', demo: !!S.t.isDemo,
-      truth: S.t.isDemo ? S.t.lastTruth : undefined, raw: SB.samplesToB64(samples), res: slim(res),
+      truth: S.t.isDemo ? S.t.lastTruth : undefined, openField: !!settings.openField, raw: SB.samplesToB64(samples),
     };
+    const res = analyzeKick(kick);
+    kick.res = slim(res);
     kicks.unshift(kick);
     if (kicks.length > 150) kicks.length = 150;
     storeKicks(kicks);
-    S.current = kick.id;
+    const clip = S.clipPromise; S.clipPromise = null;
+    S.framing = false;
     setState('idle');
-    renderResult(kick, res);
+    renderResult(kick, res, true);
     renderHistory();
     announce(res);
+    if (clip) attachClip(kick, clip);
   }
 
+  async function attachClip(kick, promise) {
+    let clip = null;
+    try { clip = await promise; } catch (e) { clip = null; }
+    if (!clip) { log('Vídeo: no se obtuvo ningún clip'); return; }
+    let off = clip.kickOffsetMs - 200, synced = false;      // el aviso del balón llega ~0,2 s después del golpeo
+    if (clip.hasAudio) {
+      const hit = await SBVideo.findImpactSound(clip.blob, clip.kickOffsetMs);
+      if (hit) { off = hit.ms; synced = true; log(`Vídeo: golpeo localizado por el sonido en ${Math.round(hit.ms)} ms (aviso en ${Math.round(clip.kickOffsetMs)} ms)`); }
+      else log('Vídeo: no se distingue el sonido del golpeo; uso el aviso del balón');
+    }
+    const ok = await SBVideo.ClipStore.put(kick.id, clip);
+    if (!ok) { toast('No he podido guardar el vídeo en el móvil.'); return; }
+    kick.video = { mime: clip.mime, kickMs: Math.max(0, Math.round(off)), durMs: Math.round(clip.durationMs), fps: clip.fps || 30, synced, kb: Math.round(clip.blob.size / 1024) };
+    log(`Vídeo guardado: ${kick.video.kb} kB, ${es(clip.durationMs / 1000)} s`);
+    storeKicks(kicks); renderHistory(); pruneClips();
+    if (S.current === kick.id) loadClip(kick);
+  }
+  async function pruneClips() {
+    const withVideo = kicks.filter((k) => k.video);
+    for (const k of withVideo.slice(40)) { if (k.fav) continue; await SBVideo.ClipStore.del(k.id); delete k.video; }
+    storeKicks(kicks); renderUsage();
+  }
+
+  function analyzeKick(k) {
+    const res = SB.analyze(SB.b64ToSamples(k.raw), (k.dtMs || 1) / 1000, { openField: !!k.openField });
+    if (res.ok && res.launch && k.elevVideo != null) SB.setElevation(res, k.elevVideo, 'vídeo');
+    return res;
+  }
   function slim(r) {
-    const keep = ['ok', 'reason', 'warnings', 'rpm', 'rps', 'speedKmh', 'axisAboveHorizontalDeg', 'sideRpm', 'horizRpm', 'topRpm', 'rifleRpm', 'elevDeg', 'type', 'spinConfidence', 'topConfidence', 'contactMs', 'flightMs', 'curve', 'lowSpin', 'aeroG'];
-    const o = {}; keep.forEach((k) => { if (r[k] !== undefined) o[k] = r[k]; });
+    const keep = ['ok', 'reason', 'warnings', 'rpm', 'rps', 'speedKmh', 'axisAboveHorizontalDeg', 'sideRpm', 'horizRpm', 'topRpm', 'rifleRpm', 'elevDeg', 'elevSource', 'type', 'spinConfidence', 'topConfidence', 'elevConfidence', 'contactMs', 'flightMs', 'secondImpactMs', 'lowSpin'];
+    const o = { av: ANALYSIS }; keep.forEach((k) => { if (r[k] !== undefined) o[k] = r[k]; });
+    if (r.ok && r.launch) { const tr = SB.flight(r.launch); o.reachM = tr.land ? tr.land.x : null; o.apexM = tr.apex.z; }
     return o;
+  }
+  // Los chutes guardados con un análisis anterior se recalculan con el actual (los datos en bruto se conservan).
+  function refreshOldResults() {
+    let n = 0;
+    for (const k of kicks) {
+      if (!k.raw || (k.res && k.res.av === ANALYSIS)) continue;
+      try { k.res = slim(analyzeKick(k)); n++; } catch (e) { log('No pude recalcular el chute ' + k.id + ': ' + e.message); }
+    }
+    if (n) { storeKicks(kicks); log('Chutes recalculados con el análisis actual: ' + n); renderHistory(); }
   }
 
   function announce(r) {
@@ -1240,11 +2435,18 @@
   }
 
   function onDisconnect() {
-    if (S.manualDisconnect) { setState('disconnected'); return; }
+    stopStallWatch();
+    if (S.manualDisconnect) { dropClip(); setState('disconnected'); return; }
     clearDownloadTimers();
+    const was = S.state;
     S.pollGen++;
-    if (['kicked', 'downloading', 'needRetry'].includes(S.state)) S.pendingDownload = true;
-    if (S.pendingDownload) { setState('needReconnect'); autoReconnect(); }
+    if (['kicked', 'downloading', 'needRetry'].includes(was)) S.pendingDownload = true;
+    if (was === 'ready') {   // con el balón armado, perder la conexión suele significar que ha salido volando
+      S.maybeKick = true;
+      if (!S.clipPromise && S.cam.rolling) { S.kickWall = (S.lastPollOk || Date.now()) + 150; S.clipPromise = S.cam.markKick(S.kickWall); }
+      S.provisional = false;
+    } else if (!S.pendingDownload) dropClip();
+    if (S.pendingDownload || S.maybeKick) { setState('needReconnect'); autoReconnect(); }
     else setState('disconnected');
   }
 
@@ -1261,219 +2463,498 @@
 
   async function manualReconnect() {
     if (!S.t) return connect(false, false);
-    if (S.t.isDemo) return connect(false, true);
+    if (S.t.isDemo) { const keep = S.pendingDownload; await connect(false, true); S.pendingDownload = keep; return; }
     await openSession();
   }
 
   function disconnect() {
     S.manualDisconnect = true;
-    clearDownloadTimers();
-    S.pollGen++;
+    clearDownloadTimers(); stopStallWatch();
+    S.pollGen++; S.pendingDownload = false; S.maybeKick = false;
+    dropClip();
     if (S.t && S.t.connected) S.t.write('CMD', SB.CMD.RESET).catch(() => {}).finally(() => S.t.disconnect());
     else setState('disconnected');
   }
+  function discard() {
+    S.pendingDownload = false; S.maybeKick = false; clearDownloadTimers(); dropClip();
+    setState(S.t && S.t.connected ? 'idle' : 'disconnected');
+  }
 
-  // ------------------------------------------------------------ interfaz
+  // ------------------------------------------------------------ estado, barra de acción y escena
   const STATES = {
-    disconnected: { text: 'Balón no conectado', sub: 'Enciende Bluetooth y Ubicación y pulsa «Conectar balón».', cls: 'off' },
-    connecting: { text: 'Conectando…', sub: 'Si el balón no aparece en la lista, acércalo y prueba a moverlo o a ponerlo un momento en la base.', cls: 'busy' },
-    idle: { text: 'Conectado', sub: 'Coloca el balón en el suelo y pulsa «Preparar chute».', cls: 'on' },
-    arming: { text: 'Preparando…', sub: '', cls: 'busy' },
-    waitingReady: { text: 'Déjalo quieto…', sub: 'Balón en el suelo y sin tocarlo hasta oír el silbato.', cls: 'wait' },
-    ready: { text: '¡LISTO! Chuta', sub: 'Debe subir ≥ 1 m y recorrer ≥ 10 m sin botar.', cls: 'ready' },
-    kicked: { text: 'Chute detectado', sub: 'Terminando de grabar…', cls: 'busy' },
-    downloading: { text: 'Descargando datos…', sub: 'Mantén el móvil a menos de 10 m del balón.', cls: 'busy' },
-    needReconnect: { text: 'Balón fuera de alcance', sub: 'El chute está guardado en el balón. Acerca el balón al móvil (menos de 10 m): se descarga solo.', cls: 'warn' },
-    needRetry: { text: 'Descarga incompleta', sub: 'Acércate al balón y pulsa «Descargar otra vez».', cls: 'warn' },
+    disconnected: { text: 'Conecta el balón', sub: 'Con Bluetooth y Ubicación activados, en Google Chrome.', cls: '' },
+    connecting: { text: 'Conectando…', sub: 'Si el balón no sale en la lista, acércalo y muévelo un poco.', cls: 'wait' },
+    idle: { text: 'Coloca el balón', sub: 'Logo hacia arriba y flechas apuntando al objetivo.', cls: '' },
+    arming: { text: 'Preparando…', sub: '', cls: 'wait' },
+    waitingReady: { text: 'Quieto…', sub: 'No toques el balón hasta oír el silbato.', cls: 'wait' },
+    ready: { text: '¡Chuta!', sub: 'Tiene que subir 1 m y recorrer 10 m sin botar.', cls: 'go' },
+    kicked: { text: 'Chute grabado', sub: 'Leyendo el balón…', cls: 'wait' },
+    downloading: { text: 'Descargando…', sub: '', cls: '' },
+    needReconnect: { text: 'Trae el balón', sub: 'El chute está guardado dentro. Acércalo al móvil y se descarga solo.', cls: '' },
+    needRetry: { text: 'Descarga incompleta', sub: 'Acerca el balón y pulsa «Descargar otra vez».', cls: 'bad' },
   };
+  const DOCK = {
+    disconnected: ['Conectar balón', 'connect', 'Probar sin balón', 'demo'],
+    connecting: ['Conectando…', null, null, null],
+    idle: [() => (kicks.length ? 'Preparar siguiente chute' : 'Preparar chute'), 'arm', null, null],
+    arming: ['Cancelar', 'cancel', null, null],
+    waitingReady: ['Cancelar', 'cancel', null, null],
+    ready: ['Cancelar', 'cancel', null, null],
+    kicked: ['Leyendo el balón…', null, null, null],
+    downloading: ['Descargando…', null, null, null],
+    needReconnect: ['Reconectar ahora', 'reconnect', 'Descartar este chute', 'discard'],
+    needRetry: ['Descargar otra vez', 'retry', 'Descartar este chute', 'discard'],
+  };
+  const ACTIONS = {
+    connect: () => connect(false, false), demo: () => connect(false, true), arm, cancel: cancelArm,
+    reconnect: manualReconnect, retry: () => { S.autoRetried = true; return downloadNow(true); }, disconnect, discard,
+  };
+  function act(name) { const fn = ACTIONS[name]; if (fn) return fn(); return null; }
 
   function setState(st, sub) {
     S.state = st;
+    if (st !== 'ready') stopStallWatch();
     const d = STATES[st] || STATES.idle;
-    const box = $('#status');
-    box.className = 'status ' + d.cls;
     $('#statusText').textContent = d.text;
     $('#statusSub').textContent = sub || d.sub;
+    $('#banner').className = 'banner' + (d.cls ? ' ' + d.cls : '');
     $('#progress').hidden = st !== 'downloading';
     if (st === 'downloading') setProgress(0);
-    const connected = S.t && S.t.connected;
-    const btn = (id, show) => { $(id).hidden = !show; };
-    btn('#btnConnect', st === 'disconnected');
-    btn('#btnDemo', st === 'disconnected');
-    btn('#btnArm', st === 'idle' && connected);
-    btn('#btnCancel', st === 'waitingReady' || st === 'ready');
-    btn('#btnReconnect', st === 'needReconnect');
-    btn('#btnRetry', st === 'needRetry');
-    btn('#btnDisconnect', !!connected && st !== 'connecting');
-    $('#btnArm').textContent = kicks.length ? 'Preparar siguiente chute' : 'Preparar chute';
-    renderInfo();
+    renderDock(); renderConn(); refreshStage();
   }
-  function setProgress(f) { $('#progressBar').style.width = Math.round(Math.max(0, Math.min(1, f)) * 100) + '%'; $('#statusSub').textContent = 'Recibido ' + Math.round(Math.min(1, f) * 100) + ' %. Mantén el móvil a menos de 10 m.'; }
-
-  function renderInfo() {
-    const el = $('#info');
-    if (!S.t || !S.t.connected) { el.textContent = S.t && S.t.isDemo ? '' : ''; el.hidden = true; return; }
-    const i = S.info, parts = [];
-    parts.push(S.t.isDemo ? 'Demostración' : (i.name || 'Smart Ball'));
-    if (i.battery != null) parts.push('Batería ' + i.battery + ' %');
-    if (i.status) parts.push(i.status.onCharger ? (i.status.charging ? 'cargando' : 'en la base') : 'fuera de la base');
-    if (i.firmware) parts.push('firmware ' + i.firmware);
-    el.textContent = parts.join(' · ');
-    el.hidden = false;
+  function setProgress(f) {
+    const p = Math.round(Math.max(0, Math.min(1, f)) * 100);
+    $('#progressBar').style.width = p + '%';
+    $('#statusSub').textContent = p + ' %. Mantén el balón cerca del móvil.';
+  }
+  function renderDock() {
+    const d = DOCK[S.state] || DOCK.idle, main = $('#btnMain'), alt = $('#btnAlt'), cam = $('#btnCam');
+    main.textContent = typeof d[0] === 'function' ? d[0]() : d[0];
+    main.dataset.act = d[1] || ''; main.disabled = !d[1];
+    main.className = 'main' + (d[1] === 'cancel' ? ' stop' : '');
+    alt.hidden = !d[2]; alt.textContent = d[2] || ''; alt.dataset.act = d[3] || '';
+    cam.hidden = !SBVideo.supported();
+    cam.setAttribute('aria-pressed', String(!!settings.cam));
+  }
+  function renderConn() {
+    const el = $('#conn');
+    $('#btnDisc').hidden = !(S.t && S.t.connected && S.state === 'idle');
+    if (!S.t || !S.t.connected) { el.textContent = S.state === 'needReconnect' ? 'Balón fuera de alcance' : 'Sin balón'; return; }
+    const i = S.info, parts = [S.t.isDemo ? 'Demostración' : (i.name || 'Smart Ball')];
+    if (i.battery != null) parts.push('batería ' + i.battery + ' %');
+    if (i.status && i.status.onCharger) parts.push(i.status.charging ? 'cargando' : 'en la base');
+    el.textContent = parts.join(', ');
+  }
+  function stageMode() {
+    const live = ['arming', 'waitingReady', 'ready', 'kicked'].includes(S.state) || (S.framing && ['idle', 'disconnected', 'connecting'].includes(S.state));
+    return settings.cam && S.cam.open && live ? 'camera' : 'scene';
+  }
+  function refreshStage() {
+    const mode = stageMode();
+    $('#preview').hidden = mode !== 'camera';
+    const showing = S.current != null && S.currentRes && mode === 'scene';
+    const quietState = S.state === 'idle' || S.state === 'disconnected';
+    $('#banner').hidden = quietState && showing;
+    $('#views').hidden = !(quietState && showing && S.fl);
+    document.querySelectorAll('#views [data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === scene.view)));
+    if (mode === 'scene') scene.draw();
   }
 
   let toastTimer = null;
   function toast(msg) {
-    const el = $('#toast'); el.textContent = msg; el.hidden = false;
+    const el = $('#toast'), dock = document.querySelector('.dock'); el.textContent = msg; el.hidden = false;
+    if (dock && dock.offsetHeight) el.style.bottom = (dock.offsetHeight + 8) + 'px';
     clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 7000);
     log('Aviso: ' + msg);
   }
   function showError(e) {
     const m = (e && e.message) || String(e);
     log('ERROR: ' + m);
-    let tip = '';
-    if (/GATT|Tiempo agotado|disconnected|desconectado/i.test(m)) tip = ' Acércate al balón y vuelve a intentarlo.';
     if (/User cancelled|chooser/i.test(m)) return;
-    toast(m + tip);
+    toast(m + (/GATT|Tiempo agotado|disconnected|desconectado/i.test(m) ? ' Acerca el balón y vuelve a intentarlo.' : ''));
   }
 
-  const fmt = (x, d) => (x == null || !isFinite(x) ? '—' : x.toFixed(d || 0));
-  const signed = (x) => (x == null || !isFinite(x) ? '—' : (x > 0 ? '+' : '') + Math.round(x));
-  const conf = (c) => (c ? `<span class="conf ${c}">${c}</span>` : '');
+  // ------------------------------------------------------------ resultado
+  const signed = (x) => (x == null || !isFinite(x) ? '—' : (x > 0 ? '+' : x < 0 ? '−' : '') + Math.round(Math.abs(x)));
+  const confTag = (c) => (c ? `<span class="tagc ${c}">fiabilidad ${c}</span>` : '');
+  const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  function renderResult(kick, resIn) {
-    const r = resIn || kick.res;
-    const box = $('#result');
-    box.hidden = false;
+  function reading(res, fl) {
+    if (res.lowSpin) return res.speedKmh >= 90 ? 'Casi sin giro y fuerte: el balón flota y se puede mover de forma imprevisible.' : 'Casi sin giro: vuela recto, sin efecto que lo desvíe.';
+    if (!fl) return '';
+    const eff = SB.spinEffect(fl, settings.goalDist);
+    const parts = [];
+    if (eff) {
+      if (Math.abs(eff.dz) >= 0.15) parts.push((eff.dz < 0 ? 'lo baja ' : 'lo sube ') + es(Math.abs(eff.dz)) + ' m');
+      if (Math.abs(eff.dy) >= 0.15) parts.push('lo desvía ' + es(Math.abs(eff.dy)) + ' m a la ' + (eff.dy > 0 ? 'izquierda' : 'derecha'));
+    }
+    if (!parts.length) return 'El giro apenas cambia la trayectoria.';
+    return `En ${es(eff.x, 0)} m, el efecto ${parts.join(' y ')} respecto al mismo chute sin giro.`;
+  }
+
+  function spinAxis(res) {
+    if (res.lowSpin || !(res.rpm > 0) || res.sideRpm == null) return null;
+    let top = res.topRpm, rifle = res.rifleRpm;
+    if (top == null || res.topConfidence === 'baja') { top = res.horizRpm || 0; rifle = 0; }   // solo se conoce la inclinación
+    const v = [rifle || 0, top, res.sideRpm], n = Math.hypot(v[0], v[1], v[2]);
+    return n ? v.map((x) => x / n) : null;
+  }
+  function strikeOf(res) {
+    if (!res.launch || res.lowSpin) return null;
+    const L = res.topConfidence === 'baja' ? { ...res.launch, top: 0, rifle: 0 } : res.launch;
+    return SB.strikePoint(L);
+  }
+  function strikeText(res, sp) {
+    if (!sp) return 'Con tan poco giro no se puede situar el golpeo.';
+    const cm = (x) => es(Math.abs(x) * 100, 1) + ' cm';
+    const parts = [];
+    if (Math.abs(sp.up) >= 0.003) parts.push(cm(sp.up) + (sp.up > 0 ? ' por encima' : ' por debajo'));
+    if (Math.abs(sp.right) >= 0.003) parts.push(cm(sp.right) + (sp.right > 0 ? ' a la derecha' : ' a la izquierda'));
+    let s = parts.length ? 'El empuje pasó ' + parts.join(' y ') + ' del centro.' : 'El empuje pasó por el centro.';
+    if (res.topConfidence === 'baja') s += ' No se distingue si fue por arriba o por abajo.';
+    return s;
+  }
+
+  function fkFacts(res, fl) {
+    const D = settings.goalDist, m = fl.main, out = [];
+    const sure = (lo, hi) => hi - lo < 0.9;   // con la banda ancha no se da veredicto
+    const range = (lo, hi) => (hi - lo < 0.25 ? '' : `Entre ${es(Math.max(0, lo))} y ${es(hi)} m según el ángulo de salida.`);
+    // El dibujo sigue la estimación central; el texto dice lo mismo y, si el margen es ancho, lo dice en condicional.
+    let wallHit = false;
+    if (settings.wall && D >= WALL_X + 2) {
+      const q = SB.flightAtX(m, WALL_X);
+      if (!q) out.push(['Barrera: el balón bota antes de llegar.', '']);
+      else if (Math.abs(q.y) >= 1.2) out.push([`Barrera: pasa por un lado, a ${es(Math.abs(q.y))} m de su centro.`, '']);
+      else {
+        const [lo, hi] = SB.bandAtX(fl, WALL_X);
+        wallHit = q.z < 1.72;
+        const s = wallHit ? (hi < 1.7 ? `llega a ${es(q.z)} m de altura y da en ella.` : `llega a ${es(q.z)} m de altura, así que daría en ella.`)
+          : lo > 2.0 ? `la supera, pasa a ${es(q.z)} m de altura.` : sure(lo, hi) ? `pasa justo, a ${es(q.z)} m de altura.` : `pasa a ${es(q.z)} m de altura, así que la superaría.`;
+        out.push(['Barrera: ' + s, range(lo, hi)]);
+      }
+    }
+    const g = SB.flightAtX(m, D), where = wallHit ? `Sin la barrera, en la portería a ${D} m` : `Portería a ${D} m`;
+    if (!g) out.push([`${where}: bota antes, a ${es(m.land ? m.land.x : 0, 1)} m.`, '']);
+    else {
+      const [lo, hi] = SB.bandAtX(fl, D);
+      const v = hi < BAR_H - 0.1 ? ', bajo el larguero' : lo > BAR_H + 0.2 ? ', por encima del larguero' : sure(lo, hi) ? ', a la altura del larguero' : '';
+      const lat = Math.abs(g.y) < 0.15 ? '' : ` Se desvía ${es(Math.abs(g.y))} m a la ${g.y > 0 ? 'izquierda' : 'derecha'}${Math.abs(g.y) > POST_Y ? ', más que medio arco' : ''}.`;
+      out.push([`${where}: llega a ${es(g.z)} m de altura${v}.${lat}`, [range(lo, hi), 'El larguero está a 2,44 m.'].filter(Boolean).join(' ')]);
+    }
+    const ang = `Ángulo de salida: ${es(res.elevDeg, 0)}°`;
+    if (res.elevSource === 'bote') out.push([ang + ', afinado con el primer bote.', '']);
+    else if (res.elevSource === 'vídeo') out.push([ang + ', medido en el vídeo.', '']);
+    else out.push([ang + ` (entre ${es(Math.max(0, res.elevRange[0]), 0)}° y ${es(res.elevRange[1], 0)}°).`, 'Es lo menos seguro con el balón solo. Se fija con el primer bote o midiéndolo en un vídeo lateral.']);
+    return out;
+  }
+
+  function renderResult(kick, resIn, animate) {
+    const res = resIn || analyzeKick(kick);
+    S.current = kick.id; S.currentRes = res;
+    $('#result').hidden = false;
     const when = new Date(kick.at);
-    $('#resWhen').textContent = when.toLocaleString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + (kick.demo ? ' · simulación' : '');
-    if (!r.ok) {
-      $('#resType').textContent = 'Sin análisis';
-      $('#resGrid').innerHTML = `<p class="bad">${r.reason || 'No se pudo analizar.'}</p>`;
-      $('#resNotes').innerHTML = '';
+    $('#resWhen').textContent = when.toLocaleString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) + (kick.demo ? ', simulación' : '');
+    $('#tag').value = kick.tag || '';
+    $('#resBody').hidden = !res.ok; $('#resBad').hidden = res.ok; $('#detailBlock').hidden = !res.ok;
+    const notes = [];
+    if (!res.ok) {
+      $('#resType').textContent = 'Chute sin analizar';
+      $('#resBad').textContent = res.reason || 'No se pudo analizar.';
+      S.fl = null; scene.setFlight(null); spinBall.stop();
     } else {
-      $('#resType').textContent = r.type || '';
-      const curve = r.sideRpm == null ? '' : (Math.abs(r.sideRpm) < 30 ? 'recto' : 'curva a la ' + (r.sideRpm > 0 ? 'izquierda' : 'derecha'));
-      const topLabel = r.topRpm == null ? '' : (r.topRpm >= 0 ? 'liftado' : 'cortado');
-      const cells = [
-        ['Velocidad', '≈ ' + fmt(r.speedKmh) + ' <small>km/h</small>', 'estimada'],
-        ['Giro', fmt(r.rpm) + ' <small>rpm</small>', fmt(r.rps, 1) + ' vueltas/s ' + conf(r.spinConfidence)],
-        ['Eje sobre la horizontal', fmt(r.axisAboveHorizontalDeg) + '<small>°</small>', '0° eje horizontal (liftado, cortado o bala) · 90° rosca pura'],
-        ['Liftado (+) / cortado (−)', signed(r.topRpm) + ' <small>rpm</small>', (topLabel ? topLabel + ' ' : '') + conf(r.topConfidence)],
-        ['Rosca', signed(r.sideRpm) + ' <small>rpm</small>', curve],
-        ['Giro en bala', signed(r.rifleRpm) + ' <small>rpm</small>', 'eje en la dirección del tiro'],
-        ['Ángulo de salida', '≈ ' + fmt(r.elevDeg) + '<small>°</small>', 'estimado'],
-        ['Contacto / vuelo analizado', fmt(r.contactMs) + ' / ' + fmt(r.flightMs) + ' <small>ms</small>', ''],
-      ];
-      $('#resGrid').innerHTML = cells.map(([k, v, s]) => `<div class="cell"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
-      const notes = (r.warnings || []).map((w) => `<li>${w}</li>`);
+      $('#resType').textContent = res.type || '';
+      $('#nSpeed').textContent = Math.round(res.speedKmh);
+      $('#nSpin').textContent = Math.round(res.rpm);
+      $('#cSpin').textContent = `${es(res.rps, 1)} vueltas por segundo`;
+      const fl = SB.kickFlight(res);
+      S.fl = fl;
+      $('#resReading').textContent = reading(res, fl);
+      const tc = (res.dir && res.dir.tc) || 0.009;
+      if (fl) {
+        const m = fl.main, hit = res.secondImpactMs != null && !res.landFit;
+        const recS = (res.secondImpactMs != null ? res.secondImpactMs : res.recordedMs) / 1000 - tc;
+        scene.setFlight(fl, { recordedS: recS, hitS: hit ? recS : null });
+        $('#flightFacts').hidden = false;
+        $('#flightFacts').innerHTML = [[m.land ? es(m.land.x, 0) + ' m' : 'más de 100 m', 'hasta el primer bote'], [es(m.apex.z) + ' m', 'altura máxima'], [m.land ? es(m.land.t) + ' s' : '—', 'en el aire']].map(([v, l]) => `<li><b>${v}</b><span>${l}</span></li>`).join('');
+        $('#flightNote').textContent = res.landFit ? `El balón botó a los ${es(res.landFit.flightS, 2)} s: la trayectoria está ajustada a ese bote.`
+          : hit ? `Línea continua: lo que midió el balón (${es(recS, 2)} s, hasta que tocó algo). Discontinua: cómo habría seguido.`
+            : `Línea continua: lo que midió el balón (${es(recS, 2)} s). Discontinua: cómo sigue según el modelo. La punteada blanca es el mismo chute sin efecto.`;
+        // ¿el segundo impacto fue un bote?
+        const ask = $('#landAsk');
+        if (res.secondImpactMs != null && !kick.openField) {
+          ask.hidden = false;
+          ask.innerHTML = `A los ${es(res.secondImpactMs / 1000, 2)} s el balón tocó algo. Si fue el primer bote en el suelo, con ese dato la trayectoria queda mucho más precisa.<br><button class="btn solid" data-land="1">Fue un bote en el suelo</button>`;
+        } else if (kick.openField && res.landFit) {
+          ask.hidden = false;
+          ask.innerHTML = 'Trayectoria ajustada con el primer bote.<br><button class="btn" data-land="0">No fue un bote: deshacer</button>';
+        } else ask.hidden = true;
+        $('#fkFacts').innerHTML = fkFacts(res, fl).map(([a, b]) => `<li>${escapeHtml(a)}${b ? `<small>${escapeHtml(b)}</small>` : ''}</li>`).join('');
+      } else {
+        scene.setFlight(null);
+        $('#flightFacts').hidden = true; $('#landAsk').hidden = true;
+        $('#flightNote').textContent = 'Sin la lectura del balón en reposo no se puede orientar la trayectoria.';
+        $('#fkFacts').innerHTML = '';
+      }
+      // giro y golpeo
+      const axis = spinAxis(res);
+      spinBall.set(axis, res.rpm, 20);
+      $('#spinCap').innerHTML = axis ? `<b>${es(res.axisAboveHorizontalDeg, 0)}° de inclinación</b>Visto desde detrás, 20 veces más lento.` + (res.topConfidence === 'baja' ? ' La orientación del eje respecto al tiro es dudosa.' : '') : '<b>Sin giro apreciable</b>No hay eje que dibujar.';
+      const sp = strikeOf(res);
+      SBScene.drawStrike($('#strikeCanvas'), sp);
+      $('#strikeCap').innerHTML = `<b>Punto de golpeo</b>${escapeHtml(strikeText(res, sp))}`;
+      const rows = [];
+      if (res.topRpm != null && !res.lowSpin) rows.push([res.topRpm >= 0 ? 'Liftado' : 'Cortado', `${signed(res.topRpm)} rpm ${confTag(res.topConfidence)}`]);
+      if (res.sideRpm != null && !res.lowSpin) rows.push(['Rosca', `${signed(res.sideRpm)} rpm <small>${Math.abs(res.sideRpm) < 30 ? 'recto' : 'hacia la ' + (res.sideRpm > 0 ? 'izquierda' : 'derecha')}</small>`]);
+      if (res.rifleRpm != null && !res.lowSpin) rows.push(['En bala', `${signed(res.rifleRpm)} rpm <small>no desvía</small>`]);
+      rows.push(['Giro total', `${Math.round(res.rpm)} rpm ${confTag(res.spinConfidence)}`]);
+      $('#split').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+      (res.warnings || []).forEach((w) => notes.push(`<li>${escapeHtml(w)}</li>`));
+      if (kick.gaps) notes.push('<li>Se perdieron paquetes en la descarga: puede haber saltos en los datos.</li>');
+      if (kick.partial) notes.push('<li>Descarga incompleta: el análisis puede ser menos fiable.</li>');
       if (kick.truth) {
         const t = kick.truth;
-        notes.unshift(`<li class="truth">Simulación «${t.preset || ''}»: real ${fmt(t.speedKmh)} km/h, ${fmt(t.rpm)} rpm, eje ${fmt(t.axisAboveHorizontalDeg)}°, liftado ${signed(t.topRpm)}, rosca ${signed(t.sideRpm)}, bala ${signed(t.rifleRpm)}, salida ${fmt(t.elevDeg)}°.</li>`);
+        notes.unshift(`<li class="truth">Simulación de un ${escapeHtml(t.preset || 'chute')}: en realidad ${es(t.speedKmh, 0)} km/h, ${es(t.rpm, 0)} rpm, liftado ${signed(t.topRpm)}, rosca ${signed(t.sideRpm)}, bala ${signed(t.rifleRpm)}, salida a ${es(t.elevDeg, 0)}°.</li>`);
       }
-      if (kick.partial) notes.push('<li>Descarga incompleta: el análisis puede ser menos fiable.</li>');
-      $('#resNotes').innerHTML = notes.length ? `<ul>${notes.join('')}</ul>` : '';
     }
-    $('#tag').value = kick.tag || '';
-    $('#tag').dataset.id = kick.id;
-    drawSpin(r);
-    drawPlot(kick, r);
+    $('#resNotes').innerHTML = notes.join('');
+    document.querySelectorAll('#distSeg [data-d]').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.d === settings.goalDist)));
+    $('#set_wall').checked = !!settings.wall;
+    refreshStage();
+    if (animate && S.fl) scene.play();
+    loadClip(kick);
+  }
+  function rerenderCurrent(animate) {
+    const k = kicks.find((x) => x.id === S.current); if (!k) return;
+    const res = analyzeKick(k); k.res = slim(res); storeKicks(kicks);
+    renderResult(k, res, animate); renderHistory();
   }
 
-  function drawCanvas(id) {
-    const cv = $(id); if (!cv || !cv.getContext) return null;
-    const ctx = cv.getContext('2d'); if (!ctx) return null;
-    const dpr = window.devicePixelRatio || 1, w = cv.clientWidth || 320, h = cv.clientHeight || 160;
-    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  // ------------------------------------------------------------ vídeo del chute
+  const P = { url: null, blob: null, kick: null, rate: 0.25, raf: 0, dur: 0, touched: false, measure: null, hold: null };
+  const RATES = [[1, '1×'], [0.5, '½×'], [0.25, '¼×'], [0.125, '⅛×']];
+  const kickS = () => (P.kick && P.kick.video ? P.kick.video.kickMs / 1000 : 0);
+  function unloadClip() {
+    const v = $('#clipVideo');
+    if (P.raf) cancelAnimationFrame(P.raf); P.raf = 0;
+    try { v.pause(); } catch (e) { /* nada */ }
+    if (P.url) { v.removeAttribute('src'); try { v.load(); } catch (e) { /* nada */ } URL.revokeObjectURL(P.url); }
+    P.url = null; P.blob = null; P.kick = null; P.touched = false; endMeasure();
+  }
+  async function loadClip(kick) {
+    if (kick && kick.video && P.kick && P.kick.id === kick.id && P.url) {   // ya está cargado: solo se refresca lo que cambia
+      P.kick = kick;
+      measureLabel(); $('#clipBlock').hidden = false; updateClipUi(); return;
+    }
+    unloadClip();
+    $('#clipBlock').hidden = true;
+    if (!kick || !kick.video) return;
+    const rec = await SBVideo.ClipStore.get(kick.id);
+    if (S.current !== kick.id || !rec || !rec.blob) return;
+    P.kick = kick; P.blob = rec.blob; P.url = URL.createObjectURL(rec.blob); P.dur = kick.video.durMs / 1000;
+    const v = $('#clipVideo');
+    v.src = P.url; v.playbackRate = P.rate;
+    $('#vRate').textContent = (RATES.find((r) => r[0] === P.rate) || RATES[2])[1];
+    $('#vPlay').textContent = 'Ver';
+    measureLabel();
+    $('#clipBlock').hidden = false;
+    updateClipUi();
+  }
+  function onClipMeta() {
+    const v = $('#clipVideo');
+    if (v.videoWidth && v.videoHeight) $('#clipWrap').style.aspectRatio = v.videoWidth + ' / ' + v.videoHeight;
+    const start = Math.max(0, kickS() - 1);
+    if (!isFinite(v.duration) || !v.duration) {   // los vídeos grabados en el navegador no traen la duración
+      const back = () => { v.removeEventListener('timeupdate', back); if (isFinite(v.duration)) P.dur = v.duration; v.currentTime = start; };
+      v.addEventListener('timeupdate', back);
+      try { v.currentTime = 1e7; } catch (e) { v.removeEventListener('timeupdate', back); }
+    } else { P.dur = v.duration; v.currentTime = start; }
+  }
+  function videoRect() {   // rectángulo que ocupa la imagen dentro del marco
+    const wrap = $('#clipWrap'), v = $('#clipVideo'), w = wrap.clientWidth, h = wrap.clientHeight;
+    const a = v.videoWidth && v.videoHeight ? v.videoWidth / v.videoHeight : 16 / 9;
+    let dw = w, dh = w / a; if (dh > h) { dh = h; dw = h * a; }
+    return { x: (w - dw) / 2, y: (h - dh) / 2, w: dw, h: dh };
+  }
+  // La trayectoria que calculó el balón, encima del vídeo: los dos toques de la medida dan el origen, el sentido
+  // y la escala (lo que avanzó el balón en ese intervalo, en píxeles y en metros). Solo vale con la cámara de lado.
+  function drawClipOverlay() {
+    const cv = $('#clipOver'); if (!cv || !cv.getContext) return;
+    let ctx = null; try { ctx = cv.getContext('2d'); } catch (e) { ctx = null; }
+    const k = P.kick, T = k && k.vtaps;
+    const show = !!(T && k.elevVideo != null && S.fl && !P.measure && S.current === k.id);
+    $('#clipNote').hidden = !show;
+    if (!ctx) return;
+    const wrap = $('#clipWrap'), w = wrap.clientWidth, h = wrap.clientHeight, dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+    if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
-    return { ctx, w, h };
-  }
-
-  function drawSpin(r) {
-    const c = drawCanvas('#spinCanvas'); if (!c) return;
-    const { ctx, w, h } = c, cx = w / 2, cy = h / 2 + 6, R = Math.min(w, h) * 0.32;
-    ctx.fillStyle = '#5b6b7f'; ctx.font = '12px system-ui, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('Eje de giro visto desde detrás del balón', cx, 14);
-    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fillStyle = '#f4f6f9'; ctx.fill(); ctx.strokeStyle = '#c7d0dc'; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.strokeStyle = '#dde3ea'; ctx.beginPath(); ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy); ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R); ctx.stroke();
-    ctx.fillStyle = '#8795a8'; ctx.fillText('arriba', cx, cy - R - 6); ctx.textAlign = 'left'; ctx.fillText('dcha', cx + R + 4, cy + 4); ctx.textAlign = 'right'; ctx.fillText('izda', cx - R - 4, cy + 4);
-    if (!r || !r.ok || r.lowSpin) { ctx.textAlign = 'center'; ctx.fillStyle = '#5b6b7f'; ctx.fillText(r && r.ok ? 'Giro demasiado bajo para fijar el eje' : '', cx, cy + R + 20); return; }
-    let x, y, dashed = false;
-    if (r.topRpm != null && r.topConfidence !== 'baja') { x = -r.topRpm; y = r.sideRpm; }
-    else if (r.axisAboveHorizontalDeg != null) { const a = r.axisAboveHorizontalDeg * Math.PI / 180; x = Math.cos(a) * r.rpm; y = Math.sin(a) * r.rpm * Math.sign(r.sideRpm || 1); dashed = true; }
-    else return;
-    const n = Math.hypot(x, y) || 1, ux = x / n, uy = y / n;
-    ctx.setLineDash(dashed ? [6, 5] : []);
-    ctx.strokeStyle = '#0b5cd6'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(cx - ux * R * 1.25, cy + uy * R * 1.25); ctx.lineTo(cx + ux * R * 1.25, cy - uy * R * 1.25); ctx.stroke();
+    if (!show) return;
+    const m = S.fl.main, R = videoRect(), z0 = m.Z[0];
+    const x0 = R.x + T.u0 * R.w, y0 = R.y + T.v0 * R.h, x1 = R.x + T.u1 * R.w, y1 = R.y + T.v1 * R.h;
+    const q = SB.flightAtT(m, Math.max(0.02, T.t1 - T.tk));
+    const Lm = q ? Math.hypot(q.x, q.z - z0) : 0; if (!(Lm > 0.2)) return;
+    const sc = Math.hypot(x1 - x0, y1 - y0) / Lm, dir = x1 >= x0 ? 1 : -1;
+    const px = (x, z) => [x0 + dir * x * sc, y0 - (z - z0) * sc];
+    const inside = (p) => p[0] > -30 && p[0] < w + 30 && p[1] > -30 && p[1] < h + 30;
+    const recS = scene.meta && scene.meta.recordedS != null ? scene.meta.recordedS : Infinity;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    for (const pass of [0, 1]) {            // primero un contorno oscuro para que se vea sobre cualquier fondo
+      for (const part of ['medido', 'proyectado']) {
+        ctx.beginPath(); let started = false;
+        for (let i = 0; i < m.T.length; i++) {
+          const t = m.T[i];
+          if (!(part === 'medido' ? t <= recS + 1e-9 : t >= recS - 0.004)) { started = false; continue; }
+          const p = px(m.X[i], m.Z[i]); if (!inside(p)) { started = false; continue; }
+          if (!started) { ctx.moveTo(p[0], p[1]); started = true; } else ctx.lineTo(p[0], p[1]);
+        }
+        ctx.setLineDash(part === 'medido' ? [] : [6, 6]);
+        ctx.strokeStyle = pass ? '#FFD60A' : 'rgba(0,0,0,0.5)'; ctx.lineWidth = pass ? 2.4 : 5; ctx.stroke();
+      }
+    }
     ctx.setLineDash([]);
-    const tx = cx + ux * R * 1.25, ty = cy - uy * R * 1.25, ang = Math.atan2(-uy, ux);
-    ctx.fillStyle = '#0b5cd6'; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx - 12 * Math.cos(ang - 0.4), ty - 12 * Math.sin(ang - 0.4)); ctx.lineTo(tx - 12 * Math.cos(ang + 0.4), ty - 12 * Math.sin(ang + 0.4)); ctx.closePath(); ctx.fill();
-    ctx.textAlign = 'center'; ctx.fillStyle = '#16202c';
-    const rifle = r.rifleRpm != null && r.topConfidence !== 'baja' ? Math.abs(r.rifleRpm) / r.rpm : null;
-    ctx.fillText(dashed ? 'Inclinación medida; orientación izda/dcha no fiable' : (rifle != null && rifle > 0.5 ? 'Eje muy alineado con el tiro (en bala)' : 'Flecha: eje según la regla de la mano derecha'), cx, h - 6);
+    const rel = ($('#clipVideo').currentTime || 0) - T.tk;   // aro donde el balón dice que estaba en este fotograma
+    if (rel >= -0.001 && rel <= m.T[m.T.length - 1]) {
+      const b = SB.flightAtT(m, Math.max(0, rel)), p = px(b.x, b.z), r = Math.max(6, SB.PHYS.R * sc * 1.3);
+      if (inside(p)) for (const pass of [0, 1]) { ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, Math.PI * 2); ctx.strokeStyle = pass ? '#FFD60A' : 'rgba(0,0,0,0.55)'; ctx.lineWidth = pass ? 2.2 : 4.6; ctx.stroke(); }
+    }
+  }
+  function updateClipUi() {
+    drawClipOverlay();
+    const v = $('#clipVideo'); if (!P.kick) return;
+    const t = v.currentTime || 0, rel = t - kickS();
+    if (document.activeElement !== $('#vSeek')) $('#vSeek').value = P.dur ? Math.round(1000 * Math.min(1, t / P.dur)) : 0;
+    $('#clipStat').textContent = (Math.abs(rel) < 0.005 ? 'golpeo' : (rel > 0 ? '+' : '−') + es(Math.abs(rel), 2) + ' s') + (P.kick.video.synced ? '' : ' (aprox.)');
+    if (P.touched && S.fl && stageMode() === 'scene') scene.setTime(rel);
+  }
+  function clipLoop() { updateClipUi(); const v = $('#clipVideo'); if (!v.paused && !v.ended) P.raf = requestAnimationFrame(clipLoop); else { P.raf = 0; $('#vPlay').textContent = 'Ver'; } }
+  function clipPlayPause() {
+    const v = $('#clipVideo'); if (!P.kick) return;
+    if (!v.paused) { v.pause(); return; }
+    P.touched = true;
+    if (v.ended || v.currentTime > kickS() + 2.4 || (P.dur && v.currentTime > P.dur - 0.15)) v.currentTime = Math.max(0, kickS() - 1.5);
+    v.playbackRate = P.rate;
+    const p = v.play(); if (p && p.catch) p.catch((e) => log('Vídeo: ' + e.message));
+    $('#vPlay').textContent = 'Pausa';
+    if (!P.raf) P.raf = requestAnimationFrame(clipLoop);
+  }
+  function clipStep(dir) {
+    const v = $('#clipVideo'); if (!P.kick) return;
+    v.pause(); P.touched = true;
+    const fps = (P.kick.video.fps || 30);
+    v.currentTime = Math.max(0, Math.min(P.dur || 1e9, v.currentTime + dir / fps));
+  }
+  function holdStep(dir, on) {
+    if (P.hold) { clearInterval(P.hold); P.hold = null; }
+    if (on) { clipStep(dir); let n = 0; P.hold = setInterval(() => { if (++n > 3) clipStep(dir); }, 110); }
+  }
+  function clipHint(msg) { const el = $('#clipHint'); el.hidden = !msg; el.textContent = msg || ''; }
+  function measureLabel() { $('#vMeasure').textContent = P.measure ? 'Salir de la medida' : P.kick && P.kick.elevVideo != null ? 'Quitar el ángulo medido' : 'Medir el ángulo de salida'; }
+  function endMeasure() { P.measure = null; $('#mark0').hidden = true; $('#mark1').hidden = true; clipHint(''); measureLabel(); }
+  function startMeasure() {
+    const k = P.kick; if (!k) return;
+    if (P.measure) { endMeasure(); drawClipOverlay(); return; }   // salir sin medir
+    if (k.elevVideo != null) { delete k.elevVideo; delete k.vtaps; toast('Ángulo medido en el vídeo quitado.'); rerenderCurrent(false); return; }
+    if (!S.currentRes || !S.currentRes.launch) { toast('Este chute no tiene trayectoria que ajustar.'); return; }
+    const v = $('#clipVideo'); v.pause(); P.touched = true;
+    P.measure = { p0: null, t0: 0 };
+    measureLabel(); drawClipOverlay();
+    v.currentTime = kickS();
+    clipHint('Con la cámara de lado y el móvil derecho: busca con ‹ y › el fotograma del golpeo y toca el balón.');
+  }
+  function onClipTap(e) {
+    if (!P.measure) { clipPlayPause(); return; }
+    const wrap = $('#clipWrap'), r = wrap.getBoundingClientRect(), x = e.clientX - r.left - wrap.clientLeft, y = e.clientY - r.top - wrap.clientTop, v = $('#clipVideo');
+    const put = (el) => { el.style.left = x + 'px'; el.style.top = y + 'px'; el.hidden = false; };
+    if (!P.measure.p0) {
+      P.measure.p0 = { x, y }; P.measure.t0 = v.currentTime; put($('#mark0'));
+      v.currentTime = Math.min(P.dur || 1e9, v.currentTime + 0.2);
+      clipHint('Ahora toca el balón donde está en este fotograma. Con ‹ y › puedes elegir otro: mejor entre 0,15 y 0,3 s después del golpeo.');
+      return;
+    }
+    // instante del golpeo: el del sonido si el primer toque se hizo en ese fotograma; si no, el del primer toque
+    const tk = P.kick.video.synced && Math.abs(P.measure.t0 - kickS()) < 0.08 ? kickS() : P.measure.t0;
+    const dt = v.currentTime - tk, dx = Math.abs(x - P.measure.p0.x), dy = P.measure.p0.y - y;
+    if (dt < 0.06) { clipHint('Avanza unos fotogramas con › antes de marcar el segundo punto.'); return; }
+    if (dx < 12) { clipHint('Los dos puntos quedan casi en vertical. Para medir el ángulo la cámara tiene que ver el chute de lado. Toca de nuevo el segundo punto o pulsa «Salir de la medida».'); return; }
+    put($('#mark1'));
+    const chord = Math.atan2(dy, dx) * 180 / Math.PI;
+    if (chord < -3 || chord > 72) { clipHint('Ese ángulo no es posible para un chute desde el suelo. Vuelve a tocar el segundo punto.'); return; }
+    const e2 = SB.elevFromChord(S.currentRes.launch, chord, dt);
+    const k = P.kick; k.elevVideo = Math.round(e2 * 10) / 10;
+    const R = videoRect(), r4 = (n) => Math.round(n * 1e4) / 1e4;
+    k.vtaps = { u0: r4((P.measure.p0.x - R.x) / R.w), v0: r4((P.measure.p0.y - R.y) / R.h), u1: r4((x - R.x) / R.w), v1: r4((y - R.y) / R.h), tk: r4(tk), t1: r4(v.currentTime) };
+    log(`Vídeo: cuerda ${es(chord)}° en ${es(dt, 2)} s → salida ${es(e2)}°`);
+    toast(`Ángulo de salida medido en el vídeo: ${es(e2, 0)}°. La trayectoria queda dibujada encima.`);
+    endMeasure();
+    rerenderCurrent(true);
+  }
+  async function shareClip() {
+    if (!P.blob) return;
+    const ext = /mp4/.test(P.blob.type) ? 'mp4' : 'webm';
+    const name = `chute-${new Date(P.kick.at).toISOString().slice(0, 19).replace(/[:T]/g, '-')}.${ext}`;
+    const file = new File([P.blob], name, { type: P.blob.type });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: 'Chute' }); } catch (e) { if (e.name !== 'AbortError') showError(e); } }
+    else downloadBlob(name, P.blob);
+  }
+  async function deleteClip() {
+    const k = P.kick; if (!k) return;
+    await SBVideo.ClipStore.del(k.id); delete k.video; delete k.elevVideo; delete k.vtaps;
+    storeKicks(kicks); unloadClip(); $('#clipBlock').hidden = true; renderHistory(); renderUsage(); rerenderCurrent(false);
+  }
+  async function renderUsage() {
+    const el = $('#clipUsage'); if (!el) return;
+    const n = kicks.filter((k) => k.video).length, kb = kicks.reduce((s, k) => s + ((k.video && k.video.kb) || 0), 0);
+    el.textContent = n ? `Vídeos guardados en este móvil: ${n} (${es(kb / 1024, 0)} MB). Se conservan los 40 más recientes y los favoritos.` : 'No hay vídeos guardados.';
   }
 
-  function drawPlot(kick, r) {
-    const c = drawCanvas('#plotCanvas'); if (!c) return;
-    const { ctx, w, h } = c;
-    let samples;
-    try { samples = SB.b64ToSamples(kick.raw); } catch (e) { return; }
-    const cpg = (r && r.countsPerG) || 511;
-    const mag = samples.map((s) => Math.hypot(s[0], s[1], s[2]) / cpg);
-    const n = mag.length, top = 4.5, pad = 26;
-    const X = (i) => pad + (i / (n - 1)) * (w - pad - 6), Y = (g) => h - 18 - (Math.min(g, top) / top) * (h - 30);
-    ctx.strokeStyle = '#e3e8ef'; ctx.lineWidth = 1; ctx.fillStyle = '#8795a8'; ctx.font = '11px system-ui, sans-serif'; ctx.textAlign = 'right';
-    for (const g of [0, 1, 2, 3, 4]) { ctx.beginPath(); ctx.moveTo(pad, Y(g)); ctx.lineTo(w - 6, Y(g)); ctx.stroke(); ctx.fillText(g + 'g', pad - 4, Y(g) + 4); }
-    const full = SB.analyze(samples, (kick.dtMs || 1) / 1000);
-    if (full.ok) { ctx.fillStyle = 'rgba(11,92,214,0.10)'; ctx.fillRect(X(full.iS), 8, X(full.iE) - X(full.iS), h - 26); }
-    ctx.strokeStyle = '#16202c'; ctx.lineWidth = 1.2; ctx.beginPath();
-    for (let i = 0; i < n; i++) { const x = X(i), y = Y(mag[i]); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
-    ctx.stroke();
-    if (full.iImp != null) { ctx.strokeStyle = '#d64545'; ctx.beginPath(); ctx.moveTo(X(full.iImp), 8); ctx.lineTo(X(full.iImp), h - 18); ctx.stroke(); }
-    ctx.textAlign = 'left'; ctx.fillStyle = '#5b6b7f';
-    ctx.fillText('Aceleración medida (g) · rojo: golpeo · azul: vuelo analizado · ' + Math.round(n * (kick.dtMs || 1)) + ' ms', pad, h - 4);
-  }
-
+  // ------------------------------------------------------------ historial y marcas
   function renderHistory() {
     const ul = $('#history');
-    if (!kicks.length) { ul.innerHTML = '<li class="empty">Aún no hay chutes guardados.</li>'; $('#histCount').textContent = ''; return; }
+    renderMarks();
+    if (!kicks.length) { ul.innerHTML = '<li class="empty">Todavía no hay ninguno. Conecta el balón o prueba sin él para ver cómo queda.</li>'; $('#histCount').textContent = ''; return; }
     $('#histCount').textContent = '(' + kicks.length + ')';
     ul.innerHTML = kicks.map((k) => {
       const r = k.res || {};
-      const t = new Date(k.at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-      const d = new Date(k.at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-      const main = r.ok ? `<b>${fmt(r.speedKmh)}</b> km/h · <b>${fmt(r.rpm)}</b> rpm · eje ${fmt(r.axisAboveHorizontalDeg)}°` : 'sin análisis';
-      return `<li data-id="${k.id}" class="${S.current === k.id ? 'sel' : ''}"><div class="h1">${d} ${t}${k.demo ? ' · demo' : ''}${k.tag ? ' · <i>' + escapeHtml(k.tag) + '</i>' : ''}</div><div class="h2">${main}</div><div class="h3">${r.ok ? (r.type || '') : (r.reason || '')}</div><button class="del" data-del="${k.id}" aria-label="Borrar">✕</button></li>`;
+      const d = new Date(k.at).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      const main = r.ok ? `<b>${es(r.speedKmh, 0)} km/h</b>, ${es(r.rpm, 0)} rpm, ${escapeHtml((r.type || '').toLowerCase())}` : 'sin analizar';
+      const meta = [d]; if (k.demo) meta.push('simulación'); if (k.video) meta.push('con vídeo'); if (k.tag) meta.push(escapeHtml(k.tag));
+      return `<li data-id="${k.id}" class="${S.current === k.id ? 'sel' : ''}"><div><div class="h2">${main}</div><div class="h1">${meta.join(', ')}</div></div><button class="ico${k.fav ? ' on' : ''}" data-fav="${k.id}" aria-label="${k.fav ? 'Quitar de favoritos' : 'Marcar como favorito'}" aria-pressed="${!!k.fav}">★</button><button class="ico" data-del="${k.id}" aria-label="Borrar este chute">✕</button></li>`;
     }).join('');
   }
-  const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function renderMarks() {
+    const real = kicks.filter((k) => !k.demo && k.res && k.res.ok), el = $('#marks');
+    if (!real.length) { el.hidden = true; return; }
+    const max = (f) => real.reduce((m, k) => { const v = f(k.res); return v != null && isFinite(v) && v > m ? v : m; }, -Infinity);
+    const sp = max((r) => r.speedKmh), rp = max((r) => r.rpm), tp = max((r) => (r.topConfidence !== 'baja' ? r.topRpm : null));
+    el.hidden = false;
+    el.innerHTML = [[es(sp, 0), 'km/h, el más rápido'], [es(rp, 0), 'rpm, el de más giro'], [tp > 0 ? es(tp, 0) : '—', 'rpm, el más liftado']].map(([v, l]) => `<li><b>${v}</b><span>${l}</span></li>`).join('');
+  }
 
   // ------------------------------------------------------------ exportar / importar
   function csvOf(list) {
-    const head = ['fecha', 'etiqueta', 'velocidad_kmh', 'rpm', 'vueltas_s', 'eje_sobre_horizontal_grados', 'liftado_rpm', 'rosca_rpm', 'bala_rpm', 'salida_grados', 'tipo', 'confianza_giro', 'confianza_liftado', 'contacto_ms', 'vuelo_ms', 'simulado'];
+    const head = ['fecha', 'etiqueta', 'velocidad_kmh', 'rpm', 'vueltas_s', 'eje_sobre_horizontal_grados', 'liftado_rpm', 'rosca_rpm', 'bala_rpm', 'salida_grados', 'salida_fuente', 'alcance_m', 'altura_max_m', 'segundo_impacto_ms', 'tipo', 'fiabilidad_giro', 'fiabilidad_liftado', 'video', 'simulado'];
     const num = (x, d) => (x == null || !isFinite(x) ? '' : x.toFixed(d || 0).replace('.', ','));
     const q = (s) => '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"';
-    const rows = list.map((k) => { const r = k.res || {}; return [q(new Date(k.at).toLocaleString('es-ES')), q(k.tag), num(r.speedKmh), num(r.rpm), num(r.rps, 1), num(r.axisAboveHorizontalDeg), num(r.topRpm), num(r.sideRpm), num(r.rifleRpm), num(r.elevDeg), q(r.ok ? r.type : r.reason), q(r.spinConfidence), q(r.topConfidence), num(r.contactMs), num(r.flightMs), k.demo ? 'sí' : 'no'].join(';'); });
+    const rows = list.map((k) => { const r = k.res || {}; return [q(new Date(k.at).toLocaleString('es-ES')), q(k.tag), num(r.speedKmh), num(r.rpm), num(r.rps, 1), num(r.axisAboveHorizontalDeg), num(r.topRpm), num(r.sideRpm), num(r.rifleRpm), num(r.elevDeg, 1), q(r.elevSource || 'balón'), num(r.reachM, 1), num(r.apexM, 1), num(r.secondImpactMs), q(r.ok ? r.type : r.reason), q(r.spinConfidence), q(r.topConfidence), k.video ? 'sí' : 'no', k.demo ? 'sí' : 'no'].join(';'); });
     return '﻿' + head.join(';') + '\n' + rows.join('\n');
   }
   function jsonOf(list) {
     return JSON.stringify({ app: 'smartball', version: VERSION, formato: 'muestras int16 little-endian x,y,z en base64; ~511 cuentas por g; periodo dtMs', exportado: new Date().toISOString(), chutes: list }, null, 1);
   }
   function stamp() { const d = new Date(); return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0') + '-' + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0'); }
-  function download(name, text, type) {
-    const blob = new Blob([text], { type });
+  function downloadBlob(name, blob) {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = name;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
+  const download = (name, text, type) => downloadBlob(name, new Blob([text], { type }));
   async function share() {
     if (!kicks.length) return toast('No hay chutes que compartir.');
     const files = [new File([jsonOf(kicks)], `smartball-${stamp()}.json`, { type: 'application/json' }), new File([csvOf(kicks)], `smartball-${stamp()}.csv`, { type: 'text/csv' })];
     if (navigator.canShare && navigator.canShare({ files })) {
       try { await navigator.share({ files, title: 'Chutes Smart Ball' }); } catch (e) { if (e.name !== 'AbortError') showError(e); }
-    } else { download(files[0].name, jsonOf(kicks), 'application/json'); toast('Tu navegador no comparte archivos; lo he descargado.'); }
+    } else { download(files[0].name, jsonOf(kicks), 'application/json'); toast('Este navegador no comparte archivos; lo he descargado.'); }
   }
   async function importFile(file) {
     try {
@@ -1482,8 +2963,8 @@
       let added = 0;
       for (const k of list) {
         if (!k.raw || kicks.some((x) => x.id === k.id)) continue;
-        const res = SB.analyze(SB.b64ToSamples(k.raw), (k.dtMs || 1) / 1000);
-        kicks.push({ ...k, res: slim(res) }); added++;
+        const copy = { ...k }; delete copy.video;
+        copy.res = slim(analyzeKick(copy)); kicks.push(copy); added++;
       }
       kicks.sort((a, b) => (a.at < b.at ? 1 : -1));
       storeKicks(kicks); renderHistory();
@@ -1493,28 +2974,51 @@
 
   // ------------------------------------------------------------ eventos
   function bind() {
-    $('#btnConnect').onclick = () => connect(false, false);
-    $('#btnDemo').onclick = () => connect(false, true);
-    $('#btnAnyDevice').onclick = () => connect(true, false);
-    $('#btnArm').onclick = arm;
-    $('#btnCancel').onclick = cancelArm;
-    $('#btnReconnect').onclick = manualReconnect;
-    $('#btnRetry').onclick = () => downloadNow(true);
-    $('#btnDisconnect').onclick = disconnect;
-    $('#btnReadStatus').onclick = async () => { if (S.t && S.t.connected) { await readInfo(); toast('Estado leído. Mira el registro.'); } else toast('Conecta primero el balón.'); };
-    $('#btnForce').onclick = async () => {
-      if (!S.t || !S.t.connected) return toast('Conecta primero el balón.');
-      S.pollGen++; S.autoRetried = true;
-      await downloadNow(true);
+    $('#btnMain').onclick = () => act($('#btnMain').dataset.act);
+    $('#btnAlt').onclick = () => act($('#btnAlt').dataset.act);
+    $('#btnDisc').onclick = disconnect;
+    $('#btnCam').onclick = toggleCam;
+    $('#views').onclick = (e) => {
+      const b = e.target.closest('button'); if (!b) return;
+      P.touched = false;
+      if (b.dataset.view) { settings.view = b.dataset.view; saveSettings(); scene.t = null; scene.setView(b.dataset.view); refreshStage(); }
+      else if (b.id === 'btnReplay') scene.play();
     };
-    $('#btnRate').onclick = async () => {
-      if (!S.t || !S.t.connected) return toast('Conecta primero el balón.');
-      try { await S.t.write('CMD', SB.samplePeriodCommand(1)); await sleep(300); await readInfo(); toast('Periodo de muestreo: ' + S.info.samplePeriodMs + ' ms.'); } catch (e) { showError(e); }
+    $('#distSeg').onclick = (e) => {
+      const b = e.target.closest('[data-d]'); if (!b) return;
+      settings.goalDist = +b.dataset.d; saveSettings(); scene.setContext(settings.goalDist, settings.wall);
+      const k = kicks.find((x) => x.id === S.current); if (k) renderResult(k, S.currentRes, false);
     };
-    $('#btnCopyLog').onclick = async () => {
-      const text = `Smart Ball app ${VERSION}\n${navigator.userAgent}\n\n` + logLines.join('\n');
-      try { await navigator.clipboard.writeText(text); toast('Registro copiado. Pégamelo en el chat.'); } catch (e) { download(`smartball-registro-${stamp()}.txt`, text, 'text/plain'); }
+    $('#set_wall').onchange = () => { settings.wall = $('#set_wall').checked; saveSettings(); scene.setContext(settings.goalDist, settings.wall); const k = kicks.find((x) => x.id === S.current); if (k) renderResult(k, S.currentRes, false); };
+    $('#landAsk').onclick = (e) => {
+      const b = e.target.closest('[data-land]'); if (!b) return;
+      const k = kicks.find((x) => x.id === S.current); if (!k) return;
+      k.openField = b.dataset.land === '1';
+      rerenderCurrent(true);
+      if (k.openField && S.currentRes && !S.currentRes.landFit) toast('Ese impacto no encaja con un bote en el suelo; dejo la trayectoria como estaba.');
     };
+    // vídeo
+    const v = $('#clipVideo');
+    v.addEventListener('loadedmetadata', onClipMeta);
+    v.addEventListener('seeked', updateClipUi); v.addEventListener('timeupdate', updateClipUi);
+    v.addEventListener('pause', () => { $('#vPlay').textContent = 'Ver'; });
+    $('#clipWrap').addEventListener('pointerdown', onClipTap);
+    window.addEventListener('resize', () => { if (P.kick) drawClipOverlay(); });
+    $('#vPlay').onclick = clipPlayPause;
+    for (const [id, dir] of [['#vBack', -1], ['#vFwd', 1]]) {
+      const b = $(id);
+      b.addEventListener('pointerdown', (e) => { e.preventDefault(); holdStep(dir, true); });
+      for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => holdStep(dir, false));
+      b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); clipStep(dir); } });
+    }
+    $('#vKick').onclick = () => { if (!P.kick) return; v.pause(); P.touched = true; v.currentTime = kickS(); };
+    $('#vRate').onclick = () => { const i = RATES.findIndex((r) => r[0] === P.rate); const n = RATES[(i + 1) % RATES.length]; P.rate = n[0]; v.playbackRate = P.rate; $('#vRate').textContent = n[1]; };
+    $('#vSeek').oninput = () => { if (!P.kick) return; v.pause(); P.touched = true; v.currentTime = (P.dur || 0) * $('#vSeek').value / 1000; };
+    $('#vSetKick').onclick = () => { if (!P.kick) return; P.kick.video.kickMs = Math.round(v.currentTime * 1000); P.kick.video.synced = true; storeKicks(kicks); updateClipUi(); toast('Golpeo fijado en este fotograma.'); };
+    $('#vMeasure').onclick = startMeasure;
+    $('#vShare').onclick = shareClip;
+    $('#vDelete').onclick = deleteClip;
+    // historial
     $('#btnCsv').onclick = () => (kicks.length ? download(`smartball-${stamp()}.csv`, csvOf(kicks), 'text/csv') : toast('No hay chutes.'));
     $('#btnJson').onclick = () => (kicks.length ? download(`smartball-${stamp()}.json`, jsonOf(kicks), 'application/json') : toast('No hay chutes.'));
     $('#btnShare').onclick = share;
@@ -1522,53 +3026,85 @@
     $('#fileIn').onchange = (e) => { const f = e.target.files[0]; if (f) importFile(f); e.target.value = ''; };
     $('#btnClear').onclick = () => { $('#confirmClear').hidden = false; };
     $('#btnClearNo').onclick = () => { $('#confirmClear').hidden = true; };
-    $('#btnClearYes').onclick = () => { kicks = []; storeKicks(kicks); renderHistory(); $('#result').hidden = true; $('#confirmClear').hidden = true; };
-    $('#history').onclick = (e) => {
+    $('#btnClearYes').onclick = async () => {
+      kicks = []; storeKicks(kicks); await SBVideo.ClipStore.clear();
+      S.current = null; S.currentRes = null; S.fl = null; scene.setFlight(null); unloadClip();
+      $('#result').hidden = true; $('#confirmClear').hidden = true; renderHistory(); renderUsage(); renderDock(); refreshStage();
+    };
+    $('#history').onclick = async (e) => {
+      const fav = e.target.closest('[data-fav]');
+      if (fav) { const k = kicks.find((x) => x.id === +fav.dataset.fav); if (k) { k.fav = !k.fav; storeKicks(kicks); renderHistory(); } return; }
       const del = e.target.closest('[data-del]');
-      if (del) { const id = +del.dataset.del; kicks = kicks.filter((k) => k.id !== id); storeKicks(kicks); renderHistory(); if (S.current === id) $('#result').hidden = true; return; }
+      if (del) {
+        const id = +del.dataset.del, k = kicks.find((x) => x.id === id);
+        if (k && k.video) await SBVideo.ClipStore.del(id);
+        kicks = kicks.filter((x) => x.id !== id); storeKicks(kicks);
+        if (S.current === id) { S.current = null; S.currentRes = null; S.fl = null; scene.setFlight(null); unloadClip(); $('#result').hidden = true; refreshStage(); }
+        renderHistory(); renderUsage(); renderDock(); return;
+      }
       const li = e.target.closest('li[data-id]'); if (!li) return;
       const k = kicks.find((x) => x.id === +li.dataset.id); if (!k) return;
-      S.current = k.id;
-      const res = SB.analyze(SB.b64ToSamples(k.raw), (k.dtMs || 1) / 1000);
-      renderResult(k, res); renderHistory();
-      $('#result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      renderResult(k, null, true); renderHistory();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     };
-    $('#tag').onchange = () => { const k = kicks.find((x) => x.id === +$('#tag').dataset.id); if (k) { k.tag = $('#tag').value.trim(); storeKicks(kicks); renderHistory(); } };
-    document.querySelectorAll('.chip').forEach((ch) => { ch.onclick = () => { const t = $('#tag'); t.value = (t.value ? t.value + ', ' : '') + ch.textContent; t.onchange(); }; });
-    for (const k of ['sound', 'speak', 'vibrate']) { const el = $('#set_' + k); el.checked = !!settings[k]; el.onchange = () => { settings[k] = el.checked; saveSettings(); }; }
+    $('#tag').onchange = () => { const k = kicks.find((x) => x.id === S.current); if (k) { k.tag = $('#tag').value.trim(); storeKicks(kicks); renderHistory(); } };
+    document.querySelectorAll('.chips button').forEach((ch) => { ch.onclick = () => { const t = $('#tag'); t.value = (t.value ? t.value + ', ' : '') + ch.textContent; t.onchange(); }; });
+    for (const k of ['sound', 'speak', 'vibrate', 'openField', 'camAudio', 'cam60']) {
+      const el = $('#set_' + k); el.checked = !!settings[k];
+      el.onchange = () => { settings[k] = el.checked; saveSettings(); if ((k === 'cam60' || k === 'camAudio') && S.cam.open && !S.cam.rolling) { S.cam.close(); if (settings.cam) ensureCam().then(refreshStage).catch((e) => toast(camError(e))); } };
+    }
+    // diagnóstico
+    $('#btnAnyDevice').onclick = () => connect(true, false);
+    $('#btnReadStatus').onclick = async () => { if (S.t && S.t.connected) { await readInfo(); toast('Estado leído. Mira el registro.'); } else toast('Conecta primero el balón.'); };
+    $('#btnRate').onclick = async () => {
+      if (!S.t || !S.t.connected) return toast('Conecta primero el balón.');
+      try { await S.t.write('CMD', SB.samplePeriodCommand(1)); await sleep(300); await readInfo(); toast('Periodo de muestreo: ' + S.info.samplePeriodMs + ' ms.'); } catch (e) { showError(e); }
+    };
+    $('#btnForce').onclick = async () => {
+      if (!S.t || !S.t.connected) return toast('Conecta primero el balón.');
+      S.pollGen++; S.autoRetried = true;
+      await downloadNow(true);
+    };
+    $('#btnCopyLog').onclick = async () => {
+      const text = `Smart Ball app ${VERSION}\n${navigator.userAgent}\n\n` + logLines.join('\n');
+      try { await navigator.clipboard.writeText(text); toast('Registro copiado. Pégamelo en el chat.'); } catch (e) { download(`smartball-registro-${stamp()}.txt`, text, 'text/plain'); }
+    };
     $('#diag').addEventListener('toggle', () => { if ($('#diag').open) $('#log').textContent = logLines.slice(-400).join('\n'); });
-    window.addEventListener('pagehide', () => { if (S.t && S.t.connected && !S.t.isDemo) { try { S.t.write('CMD', SB.CMD.RESET); } catch (e) { /* nada */ } } });
-    window.addEventListener('resize', () => { const k = kicks.find((x) => x.id === S.current); if (k && !$('#result').hidden) { const r = SB.analyze(SB.b64ToSamples(k.raw), (k.dtMs || 1) / 1000); drawSpin(r); drawPlot(k, r); } });
+    window.addEventListener('pagehide', () => { if (S.t && S.t.connected && !S.t.isDemo) { try { S.t.write('CMD', SB.CMD.RESET); } catch (e) { /* nada */ } } S.cam.close(); });
+    let rz = 0;
+    window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { scene.draw(); spinBall.draw(); if (S.currentRes && S.currentRes.ok) SBScene.drawStrike($('#strikeCanvas'), strikeOf(S.currentRes)); }, 120); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => scene.draw()).catch(() => {});
   }
 
   function checkSupport() {
     const warn = $('#support');
     const msgs = [];
-    if (!navigator.bluetooth) msgs.push('Este navegador no tiene Bluetooth web. En el Galaxy usa <b>Google Chrome</b> (Samsung Internet no sirve). En iPhone no funciona.');
-    else if (!window.isSecureContext) msgs.push('La página debe abrirse por https para usar Bluetooth.');
-    warn.innerHTML = msgs.join('<br>');
+    if (!navigator.bluetooth) msgs.push('Este navegador no tiene Bluetooth web. En el Galaxy usa Google Chrome (Samsung Internet no sirve). En iPhone no funciona. Puedes probar sin balón.');
+    else if (!window.isSecureContext) msgs.push('La página tiene que abrirse por https para usar Bluetooth.');
+    warn.textContent = msgs.join(' ');
     warn.hidden = !msgs.length;
     if (navigator.bluetooth && navigator.bluetooth.getAvailability) {
-      navigator.bluetooth.getAvailability().then((ok) => { if (!ok) { warn.innerHTML = 'El Bluetooth del móvil está apagado o no disponible.'; warn.hidden = false; } }).catch(() => {});
+      navigator.bluetooth.getAvailability().then((ok) => { if (!ok) { warn.textContent = 'El Bluetooth de este dispositivo está apagado o no existe. Puedes probar sin balón.'; warn.hidden = false; } }).catch(() => {});
     }
   }
 
   function init() {
     bind();
     checkSupport();
-    setState('disconnected');
-    renderHistory();
-    if (kicks.length) { S.current = kicks[0].id; renderResult(kicks[0], SB.analyze(SB.b64ToSamples(kicks[0].raw), (kicks[0].dtMs || 1) / 1000)); renderHistory(); }
-    log('App Smart Ball ' + VERSION + ' · ' + navigator.userAgent);
     const ver = $('#ver'); if (ver) ver.textContent = VERSION;
-    window.SmartBallApp = { S, connect, arm, analyzeKick: (k) => SB.analyze(SB.b64ToSamples(k.raw), (k.dtMs || 1) / 1000), kicks: () => kicks };
+    setState('disconnected');
+    renderHistory(); renderUsage();
+    if (kicks.length) renderResult(kicks[0], null, false);
+    renderHistory();
+    log('App Smart Ball ' + VERSION + ' · ' + navigator.userAgent);
+    setTimeout(refreshOldResults, 400);
+    window.SmartBallApp = { S, P, act, scene, settings, kicks: () => kicks, current: () => ({ kick: kicks.find((x) => x.id === S.current) || null, res: S.currentRes }), analyzeKick };
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 
 </script>
 <script>
-  // Funciona sin cobertura en el campo: guarda la app en caché del móvil.
   try {
     if ('serviceWorker' in navigator && location.protocol === 'https:') {
       var hadController = !!navigator.serviceWorker.controller, reloaded = false;

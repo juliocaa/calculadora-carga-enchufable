@@ -1,7 +1,8 @@
 // Guarda la app en el móvil para usarla sin cobertura. Con cobertura pide siempre la última versión
 // (espera como mucho 2,5 s); sin ella, sirve la copia guardada.
-const CACHE = 'smartball-1.0.1';
-const FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
+const CACHE = 'smartball-2.0';
+const FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg',
+  './fonts/anton-latin-400-normal.woff2', './fonts/atkinson-hyperlegible-latin-400-normal.woff2', './fonts/atkinson-hyperlegible-latin-700-normal.woff2'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
