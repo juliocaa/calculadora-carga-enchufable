@@ -162,9 +162,11 @@
       <button class="sec" id="btnReadStatus">Leer estado</button>
       <button class="sec" id="btnAnyDevice">Buscar cualquier dispositivo</button>
       <button class="sec" id="btnRate">Fijar muestreo 1 ms</button>
+      <button class="sec" id="btnForce">Descargar lo que tenga el balón</button>
     </div>
     <pre id="log"></pre>
   </details>
+  <p class="muted" style="text-align:center;margin:4px 0 18px">Smart Ball · versión <span id="ver"></span></p>
 </main>
 <div id="toast" hidden></div>
 <script>
@@ -818,7 +820,7 @@
   'use strict';
   const $ = (s) => document.querySelector(s);
   const U = SB.UUID16;
-  const VERSION = '1.0';
+  const VERSION = '1.0.1';
   const STORE_KEY = 'smartball.v1.kicks';
   const SETTINGS_KEY = 'smartball.v1.settings';
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -1025,7 +1027,7 @@
   }
 
   // ------------------------------------------------------------ sesión y flujo del chute
-  const S = { t: null, state: 'disconnected', info: {}, decoder: new SB.Decoder(), samplePeriodMs: 1, pendingDownload: false, reconnecting: false, dlWatch: null, finishTimer: null, manualDisconnect: false, current: null };
+  const S = { t: null, state: 'disconnected', info: {}, pollGen: 0, lastPct: 0, hasProgress: true, checkingZero: false, autoRetried: false, decoder: new SB.Decoder(), samplePeriodMs: 1, pendingDownload: false, reconnecting: false, dlWatch: null, finishTimer: null, manualDisconnect: false, current: null };
 
   async function connect(acceptAll, demo) {
     audio();
@@ -1044,9 +1046,9 @@
     await openSession();
   }
 
-  async function openSession() {
+  async function openSession(quiet) {
     try {
-      setState('connecting');
+      if (!quiet) setState('connecting');
       await S.t.connect();
       await S.t.notify('ERR', (b) => log('ADFE ← ' + hex(b)));
       await S.t.notify('LOG', onLogging);
@@ -1058,7 +1060,7 @@
       if (S.pendingDownload) { setState('idle'); toast('Reconectado. Descargo el último chute.'); await downloadNow(true); }
       else setState('idle');
     } catch (e) {
-      showError(e);
+      if (quiet) log('Reconexión: ' + ((e && e.message) || e)); else showError(e);
       setState(S.pendingDownload ? 'needReconnect' : 'disconnected');
     }
   }
@@ -1070,6 +1072,7 @@
     let b = await tryRead('BATT'); if (b) info.battery = b[0];
     b = await tryRead('STATUS'); if (b) { const v = b[0] | ((b[1] || 0) << 8); info.status = SB.describeStatus(v); log('Estado AD1F = 0x' + v.toString(16)); }
     b = await tryRead('RATE'); if (b) { const p = b[0] | ((b[1] || 0) << 8); info.samplePeriodMs = p; S.samplePeriodMs = p >= 1 && p <= 20 ? p : 1; log('Periodo de muestreo AD20 = ' + p + ' ms'); }
+    b = await tryRead('PROG'); S.hasProgress = !!b; if (b) log('Progreso AD33 = ' + b[0] + ' %'); else log('AD33 no disponible: el chute se detectará con AD14');
     b = await tryRead('FW'); if (b) info.firmware = dec.decode(b).replace(/\0/g, '');
     b = await tryRead('MFR'); if (b) info.manufacturer = dec.decode(b).replace(/\0/g, '');
     S.info = info;
@@ -1081,6 +1084,7 @@
     clearDownloadTimers();
     S.pendingDownload = false;
     S.decoder.reset();
+    S.pollGen++; S.lastPct = 0; S.checkingZero = false;
     setState('arming');
     try {
       await S.t.write('CMD', SB.CMD.RESET);
@@ -1091,7 +1095,7 @@
   }
 
   async function cancelArm() {
-    S.polling = false;
+    S.pollGen++;
     try { await S.t.write('CMD', SB.CMD.RESET); } catch (e) { log('Reset al cancelar: ' + e.message); }
     setState('idle');
   }
@@ -1103,23 +1107,47 @@
       setState('ready');
       whistle(); buzz([180, 90, 180]); setTimeout(() => say('Listo'), 900);
       pollProgress();
-    } else if (v === 0 && (S.state === 'ready' || S.state === 'waitingReady')) {
-      // Igual que el SDK oficial: si deja de estar listo antes del chute, se vuelve a armar.
-      if (S.state === 'ready') { S.polling = false; setState('waitingReady', 'Se ha movido. Déjalo quieto otra vez…'); }
-      S.t.write('CMD', SB.CMD.START_LOGGING).catch(showError);
+    } else if (v === 0 && S.state === 'ready') {
+      // Un 0 con el balón armado puede ser «chute» (así lo interpreta la app de la USC) o que el balón
+      // se ha movido sin golpeo (el SDK oficial vuelve a armar). Se decide mirando si está grabando.
+      // Antes del «listo» los 0 se ignoran, como hace el SDK oficial.
+      onNotReadyWhileArmed();
     }
   }
 
+  async function onNotReadyWhileArmed() {
+    if (S.checkingZero) return;
+    S.checkingZero = true;
+    try {
+      if (!S.hasProgress) { onKick(); return; }           // sin AD33, el 0 es la única señal de chute
+      const t0 = Date.now();
+      while (Date.now() - t0 < 900 && S.state === 'ready') await sleep(60);
+      if (S.state !== 'ready' || !S.t || !S.t.connected) return; // el sondeo ya detectó el chute
+      if (S.lastPct > 0) return;                           // está grabando: el sondeo lo recogerá
+      log('AD14=0 sin grabación: se rearma');
+      setState('waitingReady', 'Se ha movido. Déjalo quieto otra vez…');
+      await S.t.write('CMD', SB.CMD.START_LOGGING);
+    } catch (e) { showError(e); } finally { S.checkingZero = false; }
+  }
+
   async function pollProgress() {
-    if (S.polling) return;
-    S.polling = true;
-    while (S.polling && S.state === 'ready' && S.t && S.t.connected) {
+    if (!S.hasProgress) return;
+    const gen = ++S.pollGen;             // cancela cualquier sondeo anterior
+    S.lastPct = 0;
+    let errors = 0;
+    while (gen === S.pollGen && (S.state === 'ready' || S.state === 'waitingReady') && S.t && S.t.connected) {
+      if (S.state !== 'ready') { await sleep(100); continue; }
       let pct = 0;
-      try { pct = (await S.t.read('PROG'))[0]; } catch (e) { log('AD33: ' + e.message); await sleep(200); continue; }
-      if (pct >= SB.KICK_PROGRESS_THRESHOLD) { S.polling = false; log('Grabación ' + pct + ' % → chute'); onKick(); return; }
+      try { pct = (await S.t.read('PROG'))[0]; errors = 0; } catch (e) {
+        if (++errors === 1 || errors % 20 === 0) log('AD33: ' + e.message);
+        await sleep(200); continue;
+      }
+      if (gen !== S.pollGen) return;
+      if (pct !== S.lastPct) log('AD33 = ' + pct + ' %');
+      S.lastPct = pct;
+      if (pct >= SB.KICK_PROGRESS_THRESHOLD && S.state === 'ready') { S.pollGen++; onKick(); return; }
       await sleep(30);
     }
-    S.polling = false;
   }
 
   async function onKick() {
@@ -1129,9 +1157,10 @@
     try { await S.t.write('CMD', SB.CMD.STOP_LOGGING); } catch (e) { log('STOP: ' + e.message); }
     const t0 = Date.now();
     while (Date.now() - t0 < 1600 && S.t.connected) { // dejar que termine de grabar (~1,1 s)
-      try { const p = (await S.t.read('PROG'))[0]; if (p >= 100) break; } catch (e) { break; }
+      if (S.hasProgress) { try { const p = (await S.t.read('PROG'))[0]; if (p >= 100) break; } catch (e) { break; } }
       await sleep(80);
     }
+    S.autoRetried = false;
     await downloadNow(false);
   }
 
@@ -1174,6 +1203,7 @@
     const samples = S.decoder.result();
     log(`Descarga: ${samples.length} muestras, ${S.decoder.packets} paquetes, ${S.decoder.gaps} saltos de secuencia${timedOut ? ' (por tiempo)' : ''}`);
     if (samples.length < 200) {
+      if (S.t.connected && !S.autoRetried) { S.autoRetried = true; log('Descarga vacía: reintento automático'); downloadNow(true); return; }
       setState(S.t.connected ? 'needRetry' : 'needReconnect');
       toast('No llegaron datos suficientes (' + samples.length + ' muestras). Acércate al balón y pulsa «Descargar otra vez».');
       return;
@@ -1212,7 +1242,7 @@
   function onDisconnect() {
     if (S.manualDisconnect) { setState('disconnected'); return; }
     clearDownloadTimers();
-    S.polling = false;
+    S.pollGen++;
     if (['kicked', 'downloading', 'needRetry'].includes(S.state)) S.pendingDownload = true;
     if (S.pendingDownload) { setState('needReconnect'); autoReconnect(); }
     else setState('disconnected');
@@ -1222,9 +1252,9 @@
     if (S.reconnecting || !S.t || S.t.isDemo) return;
     S.reconnecting = true;
     const t0 = Date.now();
-    while (S.state === 'needReconnect' && Date.now() - t0 < 90000) {
-      try { await openSession(); if (S.t.connected) break; } catch (e) { /* reintento */ }
-      await sleep(2500);
+    while (S.state === 'needReconnect' && Date.now() - t0 < 20 * 60000 && !S.manualDisconnect) {
+      try { await openSession(true); if (S.t.connected) break; } catch (e) { /* reintento */ }
+      await sleep(3000);
     }
     S.reconnecting = false;
   }
@@ -1238,7 +1268,7 @@
   function disconnect() {
     S.manualDisconnect = true;
     clearDownloadTimers();
-    S.polling = false;
+    S.pollGen++;
     if (S.t && S.t.connected) S.t.write('CMD', SB.CMD.RESET).catch(() => {}).finally(() => S.t.disconnect());
     else setState('disconnected');
   }
@@ -1253,7 +1283,7 @@
     ready: { text: '¡LISTO! Chuta', sub: 'Debe subir ≥ 1 m y recorrer ≥ 10 m sin botar.', cls: 'ready' },
     kicked: { text: 'Chute detectado', sub: 'Terminando de grabar…', cls: 'busy' },
     downloading: { text: 'Descargando datos…', sub: 'Mantén el móvil a menos de 10 m del balón.', cls: 'busy' },
-    needReconnect: { text: 'Conexión perdida', sub: 'Acércate al balón (a menos de 10 m). Reintento automático…', cls: 'warn' },
+    needReconnect: { text: 'Balón fuera de alcance', sub: 'El chute está guardado en el balón. Acerca el balón al móvil (menos de 10 m): se descarga solo.', cls: 'warn' },
     needRetry: { text: 'Descarga incompleta', sub: 'Acércate al balón y pulsa «Descargar otra vez».', cls: 'warn' },
   };
 
@@ -1472,6 +1502,11 @@
     $('#btnRetry').onclick = () => downloadNow(true);
     $('#btnDisconnect').onclick = disconnect;
     $('#btnReadStatus').onclick = async () => { if (S.t && S.t.connected) { await readInfo(); toast('Estado leído. Mira el registro.'); } else toast('Conecta primero el balón.'); };
+    $('#btnForce').onclick = async () => {
+      if (!S.t || !S.t.connected) return toast('Conecta primero el balón.');
+      S.pollGen++; S.autoRetried = true;
+      await downloadNow(true);
+    };
     $('#btnRate').onclick = async () => {
       if (!S.t || !S.t.connected) return toast('Conecta primero el balón.');
       try { await S.t.write('CMD', SB.samplePeriodCommand(1)); await sleep(300); await readInfo(); toast('Periodo de muestreo: ' + S.info.samplePeriodMs + ' ms.'); } catch (e) { showError(e); }
@@ -1525,6 +1560,7 @@
     renderHistory();
     if (kicks.length) { S.current = kicks[0].id; renderResult(kicks[0], SB.analyze(SB.b64ToSamples(kicks[0].raw), (kicks[0].dtMs || 1) / 1000)); renderHistory(); }
     log('App Smart Ball ' + VERSION + ' · ' + navigator.userAgent);
+    const ver = $('#ver'); if (ver) ver.textContent = VERSION;
     window.SmartBallApp = { S, connect, arm, analyzeKick: (k) => SB.analyze(SB.b64ToSamples(k.raw), (k.dtMs || 1) / 1000), kicks: () => kicks };
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
@@ -1533,7 +1569,19 @@
 </script>
 <script>
   // Funciona sin cobertura en el campo: guarda la app en caché del móvil.
-  try { if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) {}
+  try {
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      var hadController = !!navigator.serviceWorker.controller, reloaded = false;
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+      // Si llega una versión nueva mientras no hay balón conectado, se recarga sola.
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (!hadController || reloaded) return;
+        var app = window.SmartBallApp;
+        if (app && app.S && app.S.state !== 'disconnected') return;
+        reloaded = true; location.reload();
+      });
+    }
+  } catch (e) {}
 </script>
 </body>
 </html>
