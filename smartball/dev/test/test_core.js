@@ -149,5 +149,22 @@ check(topSign.filter(Boolean).length >= 0.9 * topSign.length, 'liftado/cortado �
   check(signOk, 'sentido del efecto con saturación');
   check(cases.filter((c) => c.r.saturatedFrac >= 0.7).every((c) => c.r.warnings.length > 0), 'los muy saturados llevan aviso');
 }
+// 9) chute sin giro, estrellas y límites de chute válido
+{
+  check(SB.isKnuckle(55, 75) && SB.isKnuckle(110, 92) && SB.isKnuckle(150, 110), 'sin giro: dentro de los tres umbrales');
+  check(!SB.isKnuckle(65, 80) && !SB.isKnuckle(125, 100) && !SB.isKnuckle(151, 130) && !SB.isKnuckle(30, 60), 'sin giro: fuera de los umbrales');
+  const a = SB.knuckleStars(38, 115), b = SB.knuckleStars(95, 92), c = SB.knuckleStars(160, 35);
+  check(a.speed === 5 && a.spin === 5 && a.nextKmh == null && a.nextRpm == null, 'estrellas máximas: ' + JSON.stringify(a));
+  check(b.speed === 3.5 && b.spin === 3 && b.nextKmh === 97 && b.nextRpm === 85, 'estrellas intermedias: ' + JSON.stringify(b));
+  check(c.speed === 0 && c.spin === 0 && c.nextKmh === 40 && c.nextRpm === 150, 'sin estrellas: ' + JSON.stringify(c));
+  check(SB.validity({ rpm: 400, speedKmh: 80 }) == null, 'chute normal válido');
+  check(/29 km\/h/.test(SB.validity({ rpm: 200, speedKmh: 25 })) && /144/.test(SB.validity({ rpm: 200, speedKmh: 150 })) && /900/.test(SB.validity({ rpm: 950, speedKmh: 80 })), 'límites de chute válido');
+  const slow = SB.analyze(SB.simulateKick({ seed: 11, speed: 7, rpm: 300, elevDeg: 20 }).samples, 0.001);
+  check(slow.ok && /29 km\/h/.test(slow.invalid || ''), 'chute muy lento marcado como no válido: ' + (slow.ok ? Math.round(slow.speedKmh) + ' km/h, ' + slow.invalid : slow.reason));
+  const kn = SB.analyze(SB.simulateKick({ seed: 5, speed: 30, rpm: 30, top: 0.3, side: 0.2, rifle: 1, elevDeg: 10 }).samples, 0.001);
+  check(kn.ok && kn.type === 'Sin giro' && !kn.invalid, 'chute sin giro clasificado: ' + kn.type + ', ' + Math.round(kn.speedKmh) + ' km/h, ' + Math.round(kn.rpm) + ' rpm');
+  console.log('sin giro y validez: comprobados');
+}
+
 console.log(fails ? `\n${fails} FALLOS` : '\nTODO OK');
 process.exit(fails ? 1 : 0);

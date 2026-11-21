@@ -582,7 +582,6 @@
     const v0 = inv > 0 ? 1 / inv : v;
     res.speedMs = v0; res.speedKmh = v0 * 3.6;
     res.cd = Cd; res.cl = Cl;
-    if (v0 > 45) res.warnings.push('La velocidad calculada no es creíble (ningún chute pasa de unos 150 km/h): no te fíes de la trayectoria de este chute.');
     if (res.saturatedFrac > 0.5 && res.spinConfidence === 'alta') res.spinConfidence = 'media';
 
     // 9) eje respecto al suelo
@@ -690,16 +689,44 @@
       }
     }
 
-    // 11) clasificación
+    // 11) clasificación y límites de chute válido
     res.type = classify(res);
+    const notValid = validity(res);
+    if (notValid) res.invalid = notValid;
     res.ok = true;
     // series para dibujar (submuestreo)
     res.plot = { mag: magG.map((x) => Math.round(x * 100) / 100), iImp, iS, iE };
     return res;
   }
 
+  // Chute sin giro: cuanto más rápido va el balón, más giro admite sin dejar de flotar (mismos umbrales
+  // que usaba la app original: 60 rpm desde 72 km/h, 120 rpm desde 90 km/h y 150 rpm desde 108 km/h).
+  function isKnuckle(rpm, kmh) {
+    if (rpm == null || kmh == null || !isFinite(rpm) || !isFinite(kmh)) return false;
+    return (rpm <= 60 && kmh >= 72) || (rpm <= 120 && kmh >= 90) || (rpm <= 150 && kmh >= 108);
+  }
+  // Dos notas de 0 a 5 estrellas, de media en media: velocidad y poco giro. Devuelve también qué hace
+  // falta para la siguiente media estrella de cada una.
+  const STAR_KMH = [40, 48, 56, 64, 72, 80, 89, 97, 105, 113];
+  const STAR_RPM = [150, 140, 130, 120, 110, 100, 85, 70, 55, 40];
+  function knuckleStars(rpm, kmh) {
+    if (rpm == null || kmh == null || !isFinite(rpm) || !isFinite(kmh)) return null;
+    const speed = STAR_KMH.filter((t) => kmh >= t).length / 2;
+    const spin = STAR_RPM.filter((t) => rpm <= t).length / 2;
+    return { speed, spin, nextKmh: STAR_KMH.find((t) => kmh < t) || null, nextRpm: STAR_RPM.find((t) => rpm > t) || null };
+  }
+  // Límites de un chute válido: fuera de ellos el balón no da una medida en la que se pueda confiar.
+  const VALID = { minKmh: 28.8, maxKmh: 144, maxRpm: 900 };
+  function validity(r) {
+    if (r.rpm > VALID.maxRpm) return 'Más de 900 rpm: con tanto giro el sensor no mide bien. Este chute no cuenta.';
+    if (r.speedKmh <= VALID.minKmh) return 'Por debajo de 29 km/h el balón no da una medida fiable. Este chute no cuenta: chuta más fuerte.';
+    if (r.speedKmh > VALID.maxKmh) return 'Más de 144 km/h no es creíble: seguramente el balón tocó algo nada más salir. Este chute no cuenta.';
+    return null;
+  }
+
   function classify(r) {
-    if (r.lowSpin || r.rpm < 90) return r.speedKmh >= 90 ? 'Sin giro' : 'Casi sin giro';
+    if (isKnuckle(r.rpm, r.speedKmh)) return 'Sin giro';
+    if (r.lowSpin || r.rpm < 90) return 'Casi sin giro';
     const parts = [];
     const tot = r.rpm;
     if (r.topRpm != null && r.topConfidence !== 'baja') {
@@ -869,7 +896,7 @@
 
   return {
     UUID16, CMD, samplePeriodCommand, STATUS_BITS, describeStatus, N_SAMPLES, KICK_PROGRESS_THRESHOLD,
-    Decoder, encodeType2, simulateKick, analyze, classify, PHYS, cdModel, clModel, V, toHex,
+    Decoder, encodeType2, simulateKick, analyze, classify, isKnuckle, knuckleStars, VALID, validity, PHYS, cdModel, clModel, V, toHex,
     flight, flightAtX, flightAtT, kickFlight, bandAtX, spinEffect, strikePoint, fitLanding, setElevation, elevFromChord,
     samplesToB64, b64ToSamples, mulberry32,
   };

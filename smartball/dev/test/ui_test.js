@@ -65,7 +65,7 @@ function makeFakeBluetooth(window, opts) {
     ball.state = 'recording';
     if (o.vanishAtKick && !ball.vanished) { ball.vanished = true; setTimeout(() => device.gatt.disconnect(), 40); }
     if (o.zeroAtKick || o.noProgress) later(5, () => chars[0xAD14].emit([0]));
-    const sim = SB.simulateKick({ seed: 42, speed: 24, rpm: 520, top: -0.5, side: 0.85, rifle: 0.15, elevDeg: 18 });
+    const sim = SB.simulateKick(Object.assign({ seed: 42, speed: 24, rpm: 520, top: -0.5, side: 0.85, rifle: 0.15, elevDeg: 18 }, o.kickParams || {}));
     ball.kick = sim.samples; ball.truth = sim.truth;
     const t0 = Date.now();
     const step = () => { ball.pct = Math.min(100, (Date.now() - t0) / 11); if (ball.pct < 100) setTimeout(step, 15); };
@@ -147,6 +147,8 @@ const summary = (d) => `${txt(d, '#resType')} | ${txt(d, '#nSpeed')} km/h, ${txt
         check(!d.querySelector('#result .rp[data-rp="giro"]').hidden && d.querySelector('#result .rp[data-rp="vuelo"]').hidden, 'pestaña Giro y golpeo');
         d.querySelector('#rtabs [data-rp="vuelo"]').click();
       }
+      if (k === 0) check(d.querySelector('#resStars').hidden, 'sin estrellas en un chute con giro');
+      if (k === 5) check(!d.querySelector('#resStars').hidden && d.querySelectorAll('#resStars .st').length === 2 && /Velocidad/.test(txt(d, '#resStars')), 'estrellas del chute sin giro: ' + txt(d, '#resType') + ' · ' + txt(d, '#resStars'));
       if (k === 1) {
         check(kick.foot === 'right', 'pie derecho guardado');
         check(/que el anterior$/.test(txt(d, '#dSpeed')) && /que el anterior$/.test(txt(d, '#dSpin')), 'comparación con el anterior: ' + txt(d, '#dSpeed') + ' / ' + txt(d, '#dSpin'));
@@ -230,6 +232,38 @@ const summary = (d) => `${txt(d, '#resType')} | ${txt(d, '#nSpeed')} km/h, ${txt
     w.close();
   }
 
+  console.log('== 1c) Muerte súbita');
+  {
+    const { w, d, errors, app, main, alt } = await boot(false);
+    const L = app.chLogic;
+    const c0 = { type: 'speed', players: 2, n: 2, turns: [{ player: 0, v: 80 }, { player: 1, v: 75 }, { player: 0, v: 70 }, { player: 1, v: 80.2 }] };
+    check(L.settle(c0) === false && c0.sd === 1 && L.compare(c0) === -1, 'empate tras la tanda: una ronda de muerte súbita');
+    c0.turns.push({ player: 0, v: 90 }, { player: 1, v: 90.3 });
+    check(L.settle(c0) === false && c0.sd === 2, 'ronda empatada: otra más');
+    c0.turns.push({ player: 0, v: 88 }, { player: 1, v: 91 });
+    check(L.settle(c0) === true && L.compare(c0) === 1, 'gana el segundo en la segunda ronda');
+    const c1 = { type: 'range', min: 60, max: 70, players: 2, n: 1, turns: [{ player: 0, hit: true }, { player: 1, hit: true }, { player: 0, hit: true }, { player: 1, hit: false }] };
+    check(L.settle(c1) === true && L.compare(c1) === 0 && c1.sd === 1, 'rango: gana quien acierta en la muerte súbita');
+    const c2 = { type: 'spin', players: 1, n: 2, turns: [{ player: 0, v: 300 }, { player: 0, v: 300 }] };
+    check(L.settle(c2) === true && !c2.sd, 'un jugador: sin muerte súbita');
+    alt('demo');
+    await waitFor(() => app.S.state === 'idle', 3000, 'conectado demo');
+    app.CH.active = { id: 1, type: 'speed', players: 2, n: 1, names: ['Antón', 'Julio'], turns: [{ kickId: 1, player: 0, v: 80 }, { kickId: 2, player: 1, v: 80 }], sd: 0, done: false };
+    L.settle(app.CH.active); app.chRefresh();
+    check(/Muerte súbita: turno de Antón/.test(txt(d, '#chalStrip')), 'franja en muerte súbita: ' + txt(d, '#chalStrip'));
+    for (let k = 0; k < 2; k++) {
+      main('arm');
+      await waitFor(() => app.S.state === 'idle' && app.S.current && app.CH.active.turns.length === 3 + k, 15000, 'desempate ' + (k + 1));
+    }
+    const c = app.CH.active;
+    d.querySelector('#tabs [data-scr="retos"]').click();
+    check(d.querySelector('#rbGrid .sdlab') && d.querySelectorAll('#rbGrid .cell.sd').length >= 2, 'celdas de muerte súbita en el marcador');
+    if (c.done) check(/en la muerte súbita/.test(txt(d, '#rbResult')), 'resultado: ' + txt(d, '#rbResult'));
+    else check(c.sd === 2 && /Muerte súbita, ronda 2/.test(txt(d, '#rbTurn')), 'siguen empatados: ' + txt(d, '#rbTurn'));
+    check(errors.length === 0, 'sin errores JS (' + errors.join(' | ') + ')');
+    w.close();
+  }
+
   console.log('== 2) Ruta Bluetooth (Web Bluetooth simulado a nivel GATT)');
   {
     const { w, d, errors, fake, app, main } = await boot(true);
@@ -247,6 +281,51 @@ const summary = (d) => `${txt(d, '#resType')} | ${txt(d, '#nSpeed')} km/h, ${txt
     console.log('   resultado:', summary(d));
     console.log('   real: 86 km/h, 520 rpm, liftado -261, rosca +443, bala +78');
     check(!d.querySelector('#marks').hidden && /km\/h/.test(txt(d, '#marks')), 'marcas visibles con un chute real');
+    // modo comparación con la app original
+    check(d.querySelector('#cmpRes').hidden && d.querySelector('#btnAlt').hidden, 'sin modo comparación: ni campos ni botón');
+    d.querySelector('#set_cmp').click();
+    check(app.settings.cmp && !d.querySelector('#btnAlt').hidden && d.querySelector('#btnAlt').dataset.act === 'fetch' && txt(d, '#btnAlt') === 'Descargar chute del balón', 'botón «Descargar chute del balón»');
+    check(!d.querySelector('#cmpRes').hidden && d.querySelector('#refKmh') && d.querySelector('#refRpm'), 'campos para los valores de la original');
+    d.querySelector('#refKmh').value = '80'; d.querySelector('#refRpm').value = '500';
+    d.querySelector('#cmpRes [data-cmp="save"]').click();
+    const k1 = app.kicks()[0];
+    check(k1.ref && k1.ref.kmh === 80 && k1.ref.rpm === 500, 'valores de la original guardados');
+    check(/App original: 80 km\/h y 500 rpm/.test(txt(d, '#cmpRes')) && /Esta app: velocidad/.test(txt(d, '#cmpRes')), 'comparación: ' + txt(d, '#cmpRes'));
+    check(/original: 80 km\/h, 500 rpm/.test(txt(d, '#history')), 'el historial muestra la original');
+    // otra app mide un chute: el balón lo conserva y aquí se descarga sin prepararlo
+    fake.ball.kick = SB.simulateKick({ seed: 77, speed: 27, rpm: 380, top: 0.8, side: 0.3, rifle: 0, elevDeg: 16 }).samples;
+    const nLog = fake.log.length;
+    d.querySelector('#btnAlt').click();
+    await waitFor(() => app.S.state === 'idle' && app.kicks().length === 2, 15000, 'chute guardado descargado');
+    check(JSON.stringify(fake.log.slice(nLog).map((c) => c[0])) === JSON.stringify([4, 6, 10]), 'sin empezar a grabar: parar, reiniciar y descargar');
+    check(app.kicks()[0].fetched === true && !app.kicks()[0].chal && !d.querySelector('#refKmh').value, 'chute descargado del balón, listo para comparar');
+    d.querySelector('#btnAlt').click();
+    await waitFor(() => /ya estaba descargado/.test(txt(d, '#toast')), 15000, 'aviso de repetido');
+    check(app.kicks().length === 2, 'el mismo chute no se duplica');
+    fake.ball.kick = [];
+    d.querySelector('#btnAlt').click();
+    await waitFor(() => /ningún chute guardado/.test(txt(d, '#toast')), 15000, 'aviso de balón vacío');
+    check(app.S.state === 'idle' && app.kicks().length === 2, 'balón sin chute: vuelve a reposo');
+    d.querySelector('#tabs [data-scr="more"]').click();
+    check(/1 chute comparado/.test(txt(d, '#cmpSum')) && /te faltan 19/.test(txt(d, '#cmpSum')), 'resumen de la comparación: ' + txt(d, '#cmpSum'));
+    d.querySelector('#tabs [data-scr="kick"]').click();
+    check(errors.length === 0, 'sin errores JS (' + errors.join(' | ') + ')');
+    w.close();
+  }
+
+  console.log('== 2b) Chute no válido (demasiado lento) y retos');
+  {
+    const { w, d, errors, app, main } = await boot(true, { kickParams: { speed: 7, rpm: 300, top: 0.5, side: 0.2, rifle: 0, elevDeg: 22 } });
+    main('connect');
+    await waitFor(() => app.S.state === 'idle', 3000, 'conectado');
+    d.querySelector('#tabs [data-scr="retos"]').click();
+    d.querySelector('#rtStart').click();
+    main('arm');
+    await waitFor(() => app.S.state === 'idle' && app.S.current, 15000, 'resultado');
+    const { res } = app.current();
+    check(res.ok && res.invalid && !d.querySelector('#resBad').hidden && /29 km\/h/.test(txt(d, '#resBad')), 'aviso de chute no válido: ' + txt(d, '#resBad'));
+    check(app.CH.active.turns.length === 0 && /no cuenta para el reto/.test(txt(d, '#resChal')), 'no gasta el turno del reto: ' + txt(d, '#resChal'));
+    check(d.querySelector('#marks').hidden && /no válido/.test(txt(d, '#history')), 'fuera de las marcas y marcado en el historial');
     check(errors.length === 0, 'sin errores JS (' + errors.join(' | ') + ')');
     w.close();
   }

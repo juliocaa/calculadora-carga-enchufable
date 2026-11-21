@@ -3,8 +3,8 @@
   'use strict';
   const $ = (s) => document.querySelector(s);
   const U = SB.UUID16, es = SBScene.es;
-  const VERSION = '3.0';
-  const ANALYSIS = 2;   // sube cuando cambia el análisis: los chutes guardados se recalculan
+  const VERSION = '3.1';
+  const ANALYSIS = 3;   // sube cuando cambia el análisis: los chutes guardados se recalculan
   const STORE_KEY = 'smartball.v1.kicks';
   const SETTINGS_KEY = 'smartball.v1.settings';
   const WALL_X = 9.15, BAR_H = 2.44, POST_Y = 3.66;
@@ -27,7 +27,7 @@
   // ------------------------------------------------------------ ajustes y almacenamiento
   const settings = {
     sound: true, speak: true, vibrate: true, cam: false, cam60: false, camAudio: true, openField: false, goalDist: 20, wall: true, view: 'behind',
-    foot: null, rtab: 'vuelo', evoMetric: 'speed', evoFoot: 'all',
+    foot: null, rtab: 'vuelo', evoMetric: 'speed', evoFoot: 'all', cmp: false,
     rt: { type: 'range', min: 60, max: 70, players: 1, n: 5, names: ['', ''] },
   };
   try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch (e) { /* sin almacenamiento */ }
@@ -40,6 +40,7 @@
     }
   }
   let kicks = loadKicks();
+  const usable = (r) => !!(r && r.ok && !r.invalid);   // analizado y dentro de los límites de chute válido
 
   // ------------------------------------------------------------ sonido, voz y vibración
   let actx = null;
@@ -219,7 +220,7 @@
   const S = {
     t: null, state: 'disconnected', info: {}, decoder: new SB.Decoder(), samplePeriodMs: 1,
     pollGen: 0, lastPct: 0, lastPollOk: 0, hasProgress: true, checkingZero: false, autoRetried: false,
-    pendingDownload: false, maybeKick: false, reconnecting: false, dlWatch: null, finishTimer: null, stallTimer: null, manualDisconnect: false,
+    pendingDownload: false, maybeKick: false, fetching: false, reconnecting: false, dlWatch: null, finishTimer: null, stallTimer: null, manualDisconnect: false,
     cam: new SBVideo.KickCam(log), clipPromise: null, kickWall: 0, provisional: false, framing: false,
     current: null, currentRes: null, fl: null,
   };
@@ -328,7 +329,7 @@
     if (screen !== 'kick') showScreen('kick');
     audio();
     clearDownloadTimers();
-    S.pendingDownload = false; S.maybeKick = false;
+    S.pendingDownload = false; S.maybeKick = false; S.fetching = false;
     S.decoder.reset();
     S.pollGen++; S.lastPct = 0; S.checkingZero = false;
     dropClip();
@@ -483,22 +484,34 @@
     const samples = S.decoder.result();
     log(`Descarga: ${samples.length} muestras, ${S.decoder.packets} paquetes, ${S.decoder.gaps} saltos de secuencia${timedOut ? ' (por tiempo)' : ''}, ${Date.now() - S.dlStart} ms`);
     if (samples.length < 200) {
+      if (S.fetching) { S.fetching = false; setState(S.t.connected ? 'idle' : 'disconnected'); toast('El balón no tiene ningún chute guardado.'); return; }
       if (S.t.connected && !S.autoRetried) { S.autoRetried = true; log('Descarga vacía: reintento automático'); downloadNow(true); return; }
       setState(S.t.connected ? 'needRetry' : 'needReconnect');
       toast('No llegaron datos suficientes (' + samples.length + ' muestras). Acerca el balón y pulsa «Descargar otra vez».');
       return;
     }
     S.pendingDownload = false;
+    const fetched = S.fetching; S.fetching = false;
     const kick = {
       id: Date.now(), at: new Date().toISOString(), dtMs: S.samplePeriodMs, n: samples.length,
       gaps: S.decoder.gaps, partial: !!timedOut && samples.length < 1000, tag: '', demo: !!S.t.isDemo,
       truth: S.t.isDemo ? S.t.lastTruth : undefined, openField: !!settings.openField, foot: settings.foot || null, raw: SB.samplesToB64(samples),
     };
+    if (fetched) {
+      kick.fetched = true;
+      const same = kicks.find((k) => k.raw === kick.raw);
+      if (same) {   // ya estaba en el historial: se enseña ese mismo
+        setState('idle'); if (screen !== 'kick') showScreen('kick');
+        renderResult(same, null, true); renderHistory();
+        toast('Ese chute ya estaba descargado.');
+        return;
+      }
+    }
     const res = analyzeKick(kick);
     kick.res = slim(res);
     kicks.unshift(kick);
     if (kicks.length > 150) kicks.length = 150;
-    const said = chAssign(kick, res);
+    const said = fetched ? '' : chAssign(kick, res);   // un chute descargado sin prepararlo aquí no cuenta para el reto
     storeKicks(kicks);
     const clip = S.clipPromise; S.clipPromise = null;
     S.framing = false;
@@ -540,7 +553,7 @@
     return res;
   }
   function slim(r) {
-    const keep = ['ok', 'reason', 'warnings', 'rpm', 'rps', 'speedKmh', 'axisAboveHorizontalDeg', 'sideRpm', 'horizRpm', 'topRpm', 'rifleRpm', 'elevDeg', 'elevSource', 'type', 'spinConfidence', 'topConfidence', 'elevConfidence', 'contactMs', 'flightMs', 'secondImpactMs', 'lowSpin'];
+    const keep = ['ok', 'reason', 'warnings', 'rpm', 'rps', 'speedKmh', 'axisAboveHorizontalDeg', 'sideRpm', 'horizRpm', 'topRpm', 'rifleRpm', 'elevDeg', 'elevSource', 'type', 'spinConfidence', 'topConfidence', 'elevConfidence', 'contactMs', 'flightMs', 'secondImpactMs', 'lowSpin', 'invalid'];
     const o = { av: ANALYSIS }; keep.forEach((k) => { if (r[k] !== undefined) o[k] = r[k]; });
     if (r.ok && r.launch) { const tr = SB.flight(r.launch); o.reachM = tr.land ? tr.land.x : null; o.apexM = tr.apex.z; }
     return o;
@@ -557,6 +570,7 @@
 
   function announce(r, extra) {
     if (!r.ok) { beep(300, 0.3); say('No he podido analizar el chute' + (extra ? '. ' + extra : '')); return; }
+    if (r.invalid) { beep(300, 0.3); say('Chute no válido. ' + r.invalid.split(':')[0] + (extra ? '. ' + extra : '')); return; }
     beep(1568, 0.1); setTimeout(() => beep(2093, 0.14), 120);
     const parts = [Math.round(r.speedKmh) + ' kilómetros por hora', Math.round(r.rpm) + ' revoluciones'];
     if (r.type) parts.push(r.type.toLowerCase());
@@ -606,7 +620,7 @@
     else setState('disconnected');
   }
   function discard() {
-    S.pendingDownload = false; S.maybeKick = false; clearDownloadTimers(); dropClip();
+    S.pendingDownload = false; S.maybeKick = false; S.fetching = false; clearDownloadTimers(); dropClip();
     setState(S.t && S.t.connected ? 'idle' : 'disconnected');
   }
 
@@ -626,7 +640,7 @@
   const DOCK = {
     disconnected: ['Conectar balón', 'connect', 'Probar sin balón', 'demo'],
     connecting: ['Conectando…', null, null, null],
-    idle: [() => (kicks.length ? 'Preparar siguiente chute' : 'Preparar chute'), 'arm', null, null],
+    idle: [() => (kicks.length ? 'Preparar siguiente chute' : 'Preparar chute'), 'arm', () => (settings.cmp ? 'Descargar chute del balón' : null), 'fetch'],
     arming: ['Cancelar', 'cancel', null, null],
     waitingReady: ['Cancelar', 'cancel', null, null],
     ready: ['Cancelar', 'cancel', null, null],
@@ -637,8 +651,15 @@
   };
   const ACTIONS = {
     connect: () => connect(false, false), demo: () => connect(false, true), arm, cancel: cancelArm,
-    reconnect: manualReconnect, retry: () => { S.autoRetried = true; return downloadNow(true); }, disconnect, discard,
+    reconnect: manualReconnect, retry: () => { S.autoRetried = true; return downloadNow(true); }, disconnect, discard, fetch: fetchStored,
   };
+  // Descarga el último chute que guarda el balón sin prepararlo antes: sirve para leer el mismo chute que acaba
+  // de medir la app original (el balón lo conserva hasta que se prepara el siguiente).
+  async function fetchStored() {
+    if (!S.t || !S.t.connected) return;
+    dropClip(); S.fetching = true; S.autoRetried = true;
+    await downloadNow(true);
+  }
   function act(name) { const fn = ACTIONS[name]; if (fn) return fn(); return null; }
 
   function setState(st, sub) {
@@ -663,7 +684,8 @@
     main.textContent = typeof d[0] === 'function' ? d[0]() : d[0];
     main.dataset.act = d[1] || ''; main.disabled = !d[1];
     main.className = 'main' + (d[1] === 'cancel' ? ' stop' : '');
-    alt.hidden = !d[2]; alt.textContent = d[2] || ''; alt.dataset.act = d[3] || '';
+    const altLab = typeof d[2] === 'function' ? d[2]() : d[2];
+    alt.hidden = !altLab; alt.textContent = altLab || ''; alt.dataset.act = altLab ? d[3] || '' : '';
     cam.hidden = !SBVideo.supported();
     cam.setAttribute('aria-pressed', String(!!settings.cam));
     $('#dock').hidden = screen !== 'kick';
@@ -726,7 +748,7 @@
     if (name === 'kick') { refreshStage(); redrawPanels(); }
     else if (name === 'hist') { renderHistory(); renderEvo(); }
     else if (name === 'retos') renderChallenge();
-    else if (name === 'more') renderUsage();
+    else if (name === 'more') { renderUsage(); renderCmpSummary(); }
   }
 
   let toastTimer = null;
@@ -829,7 +851,9 @@
     const when = new Date(kick.at);
     $('#resWhen').textContent = when.toLocaleString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) + (kick.demo ? ', simulación' : '');
     $('#tag').value = kick.tag || '';
-    $('#resBody').hidden = !res.ok; $('#resBad').hidden = res.ok;
+    $('#resBody').hidden = !res.ok; $('#resBad').hidden = res.ok && !res.invalid;
+    if (res.ok) $('#resBad').textContent = res.invalid || '';
+    renderStars(res);
     const notes = [];
     if (!res.ok) {
       $('#resType').textContent = 'Chute sin analizar';
@@ -905,32 +929,49 @@
     if (animate && S.fl) scene.play();
     loadClip(kick);
   }
+  // Notas del chute sin giro (hasta 150 rpm): velocidad y poco giro, de 0 a 5 estrellas.
+  const starsHtml = (v, label) => `<span class="st" style="--v:${v}" role="img" aria-label="${label}: ${es(v, v % 1 ? 1 : 0)} de 5 estrellas"></span>`;
+  function renderStars(res) {
+    const el = $('#resStars'), st = usable(res) && res.rpm <= 150 ? SB.knuckleStars(res.rpm, res.speedKmh) : null;
+    el.hidden = !st; if (!st) return;
+    const next = [];
+    if (st.nextKmh) next.push(`llegar a ${st.nextKmh} km/h`);
+    if (st.nextRpm) next.push(`bajar de ${st.nextRpm + 1} a ${st.nextRpm} rpm`);
+    el.innerHTML = `<div><b>Velocidad</b>${starsHtml(st.speed, 'velocidad')}</div><div><b>Poco giro</b>${starsHtml(st.spin, 'poco giro')}</div>`
+      + (next.length ? `<small>Media estrella más: ${next.join(' o ')}.</small>` : '<small>Nota máxima en las dos.</small>');
+  }
   // pie, favorito y reto del chute que se está viendo
   const FOOT = { left: 'izquierdo', right: 'derecho' };
   function renderResMeta(kick, res) {
+    renderCmp(kick, res);
     $('#resFoot').innerHTML = kick.foot ? `Pie <b>${FOOT[kick.foot]}</b>` : 'Pie sin indicar';
     $('#resFav').setAttribute('aria-pressed', String(!!kick.fav));
     $('#resFav').textContent = kick.fav ? '★ Favorito' : '☆ Favorito';
-    const vc = $('#resChal'), ch = kick.chal;
-    if (!ch) { vc.hidden = true; return; }
-    const who = ch.name ? ch.name + ', ' : '';
+    const vc = $('#resChal'), ch = kick.chal, c = CH.active;
+    if (!ch) {
+      const skip = c && !c.done && kick.chalSkip === c.id;
+      vc.hidden = !skip;
+      if (skip) { vc.textContent = 'Este chute no cuenta para el reto: el balón no dio una medida válida. Repítelo.'; vc.className = 'verdict miss'; }
+      return;
+    }
+    const who = ch.name ? ch.name + ', ' : '', turn = ch.sd ? `desempate ${ch.sd}` : `chute ${ch.k} de ${ch.n}`;
     let txt, cls = '';
     if (ch.type === 'range') {
       cls = ch.hit ? 'hit' : 'miss';
-      txt = ch.v == null ? `Reto: ${who}chute ${ch.k} de ${ch.n}. Sin velocidad: cuenta como fuera.`
-        : `${ch.hit ? 'Dentro' : 'Fuera'} del rango: ${Math.round(ch.v)} km/h, entre ${ch.min} y ${ch.max}. ${who ? who.charAt(0).toUpperCase() + who.slice(1) : 'Chute '}${who ? 'chute ' : ''}${ch.k} de ${ch.n}.`;
-    } else txt = `Reto «${RT[ch.type].label.toLowerCase()}»: ${who}chute ${ch.k} de ${ch.n}.`;
-    const c = CH.active;
+      txt = ch.v == null ? `Reto: ${who}${turn}. Sin velocidad: cuenta como fuera.`
+        : `${ch.hit ? 'Dentro' : 'Fuera'} del rango: ${Math.round(ch.v)} km/h, entre ${ch.min} y ${ch.max}. ${who ? who.charAt(0).toUpperCase() + who.slice(1) + turn : turn.charAt(0).toUpperCase() + turn.slice(1)}.`;
+    } else txt = `Reto «${RT[ch.type].label.toLowerCase()}»: ${who}${turn}.`;
     if (c && c.id === ch.id) {
       const last = c.turns[c.turns.length - 1];
-      if (c.done) { const w = chWinner(c); txt += c.players > 1 ? (w < 0 ? ' Reto terminado: empate.' : ` Reto terminado: gana ${chName(c, w)}.`) : ' Reto terminado.'; }
+      if (c.done) { const w = chWinner(c); txt += c.players > 1 ? (w < 0 ? ' Reto terminado: empate.' : ` Reto terminado: gana ${chName(c, w)}${c.sd ? ' en la muerte súbita' : ''}.`) : ' Reto terminado.'; }
+      else if (last && last.kickId === kick.id && c.players > 1 && chTurnInfo(c).sd && !ch.sd) txt += ' Empate: muerte súbita.' + ` Ahora le toca a ${chName(c, chTurnInfo(c).player)}.`;
       else if (last && last.kickId === kick.id) txt += c.players > 1 ? ` Ahora le toca a ${chName(c, chTurnInfo(c).player)}.` : '';
     }
     vc.textContent = txt; vc.className = 'verdict' + (cls ? ' ' + cls : ''); vc.hidden = false;
   }
   function prevKick(kick) {
     const i = kicks.indexOf(kick); if (i < 0) return null;
-    for (let j = i + 1; j < kicks.length; j++) { const k = kicks[j]; if (!!k.demo === !!kick.demo && k.res && k.res.ok) return k; }
+    for (let j = i + 1; j < kicks.length; j++) { const k = kicks[j]; if (!!k.demo === !!kick.demo && usable(k.res)) return k; }
     return null;
   }
   function deltaText(d, unit) {
@@ -967,6 +1008,77 @@
     const k = kicks.find((x) => x.id === S.current); if (!k) return;
     const res = analyzeKick(k); k.res = slim(res); storeKicks(kicks);
     renderResult(k, res, animate); renderHistory();
+  }
+
+  // ------------------------------------------------------------ comparación con la app original
+  // Se mide el mismo chute con las dos apps y se apuntan aquí los valores de la original: con unos 20 chutes
+  // variados se ajustan las fórmulas de esta app a las suyas (calibración contra una referencia).
+  let cmpEdit = null;
+  const pct = (x) => (x > 0 ? '+' : x < 0 ? '−' : '') + es(Math.abs(x) * 100, 0) + ' %';
+  const parseNum = (t) => { const v = parseFloat(String(t || '').trim().replace(',', '.')); return isFinite(v) ? v : null; };
+  function diffLine(ours, ref, unit, withPct) {
+    const d = ours - ref, r = Math.round(d);
+    if (r === 0) return 'igual';
+    return `${Math.abs(r)} ${unit} ${r > 0 ? 'más' : 'menos'}` + (withPct && ref ? ` (${pct(d / ref)})` : '');
+  }
+  function renderCmp(kick, res) {
+    const box = $('#cmpRes'), ref = kick.ref;
+    box.hidden = !(ref || settings.cmp);
+    if (box.hidden) return;
+    if (!ref || cmpEdit === kick.id) {
+      const v = (x) => (x == null ? '' : String(x).replace('.', ','));
+      box.innerHTML = `<p><b>App original:</b> escribe lo que marcó en este mismo chute.</p>`
+        + `<div class="cmpin"><label><span>Velocidad</span><input id="refKmh" type="text" inputmode="decimal" maxlength="5" autocomplete="off" value="${v(ref && ref.kmh)}"><span>km/h</span></label>`
+        + `<label><span>Giro</span><input id="refRpm" type="text" inputmode="numeric" maxlength="5" autocomplete="off" value="${v(ref && ref.rpm)}"><span>rpm</span></label>`
+        + `<button class="btn solid" data-cmp="save">Guardar</button></div>`;
+      return;
+    }
+    const orig = [ref.kmh != null ? `${es(ref.kmh, 0)} km/h` : null, ref.rpm != null ? `${es(ref.rpm, 0)} rpm` : null].filter(Boolean).join(' y ');
+    let ours;
+    if (res && res.ok) {
+      const p = [];
+      if (ref.kmh != null) p.push('velocidad ' + diffLine(res.speedKmh, ref.kmh, 'km/h', true));
+      if (ref.rpm != null) p.push('giro ' + diffLine(res.rpm, ref.rpm, 'rpm', ref.rpm >= 100));
+      ours = 'Esta app: ' + p.join(', ') + '.';
+    } else ours = 'Esta app no pudo analizar este chute.';
+    box.innerHTML = `<p><b>App original:</b> ${orig}.</p><p class="quiet">${ours}</p><button class="link" data-cmp="edit">Cambiar</button>`;
+  }
+  function saveCmp() {
+    const k = kicks.find((x) => x.id === S.current); if (!k) return;
+    const kmh = parseNum($('#refKmh').value), rpm = parseNum($('#refRpm').value);
+    if (kmh == null && rpm == null) return toast('Escribe la velocidad, el giro o los dos.');
+    if (kmh != null && (kmh < 10 || kmh > 200)) return toast('La velocidad tiene que estar entre 10 y 200 km/h.');
+    if (rpm != null && (rpm < 0 || rpm > 1500)) return toast('El giro tiene que estar entre 0 y 1.500 rpm.');
+    k.ref = { kmh, rpm, at: new Date().toISOString() };
+    cmpEdit = null; storeKicks(kicks);
+    renderCmp(k, S.currentRes); renderHistory(); renderCmpSummary();
+    const n = kicks.filter((x) => x.ref).length;
+    toast(`Guardado. Llevas ${n} ${n === 1 ? 'chute comparado' : 'chutes comparados'}.`);
+  }
+  function cmpStats() {
+    const withRef = kicks.filter((k) => k.ref), list = withRef.filter((k) => k.res && k.res.ok);
+    const med = (a) => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
+    const sp = list.filter((k) => k.ref.kmh != null).map((k) => k.res.speedKmh / k.ref.kmh - 1);
+    const rp = list.filter((k) => k.ref.rpm != null).map((k) => k.res.rpm - k.ref.rpm);
+    return { n: withRef.length, nSp: sp.length, sp: med(sp), spAbs: med(sp.map(Math.abs)), nRp: rp.length, rp: med(rp), rpAbs: med(rp.map(Math.abs)) };
+  }
+  function renderCmpSummary() {
+    const st = cmpStats(), el = $('#cmpSum');
+    if (!st.n) { el.textContent = 'Todavía no has comparado ningún chute.'; return; }
+    const parts = [`${st.n} ${st.n === 1 ? 'chute comparado' : 'chutes comparados'}.`];
+    if (st.nSp) parts.push(`Velocidad: esta app da ${Math.abs(st.sp) < 0.005 ? 'lo mismo' : `un ${es(Math.abs(st.sp) * 100, 0)} % ${st.sp > 0 ? 'más' : 'menos'}`} que la original (mediana); diferencia típica, ${es(st.spAbs * 100, 0)} %.`);
+    if (st.nRp) parts.push(`Giro: ${Math.abs(st.rp) < 1 ? 'lo mismo' : `${es(Math.abs(st.rp), 0)} rpm ${st.rp > 0 ? 'más' : 'menos'}`} (mediana); diferencia típica, ${es(st.rpAbs, 0)} rpm.`);
+    parts.push(st.n < 20 ? `Para ajustar las fórmulas hacen falta unos 20: te faltan ${20 - st.n}.` : 'Ya hay suficientes: envíame la comparación.');
+    el.textContent = parts.join(' ');
+  }
+  async function exportCmp() {
+    const list = kicks.filter((k) => k.ref);
+    if (!list.length) return toast('Todavía no has comparado ningún chute.');
+    const name = `smartball-comparacion-${stamp()}.json`, text = jsonOf(list);
+    const file = typeof File === 'function' ? new File([text], name, { type: 'application/json' }) : null;
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'Comparación con la app original' }); } catch (e) { if (e.name !== 'AbortError') showError(e); }
+    } else { download(name, text, 'application/json'); toast('Archivo descargado: mándamelo por el chat.'); }
   }
 
   // ------------------------------------------------------------ vídeo del chute
@@ -1157,13 +1269,14 @@
     ul.innerHTML = kicks.map((k) => {
       const r = k.res || {};
       const d = new Date(k.at).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-      const main = r.ok ? `<b>${es(r.speedKmh, 0)} km/h</b>, ${es(r.rpm, 0)} rpm, ${escapeHtml((r.type || '').toLowerCase())}` : 'sin analizar';
-      const meta = [d]; if (k.foot) meta.push('pie ' + FOOT[k.foot]); if (k.demo) meta.push('simulación'); if (k.video) meta.push('con vídeo'); if (k.tag) meta.push(escapeHtml(k.tag));
+      const main = r.ok ? `<b>${es(r.speedKmh, 0)} km/h</b>, ${es(r.rpm, 0)} rpm, ${escapeHtml((r.type || '').toLowerCase())}${r.invalid ? ', <span class="inval">no válido</span>' : ''}` : 'sin analizar';
+      const meta = [d]; if (k.foot) meta.push('pie ' + FOOT[k.foot]);
+      if (k.ref) meta.push('original: ' + [k.ref.kmh != null ? es(k.ref.kmh, 0) + ' km/h' : null, k.ref.rpm != null ? es(k.ref.rpm, 0) + ' rpm' : null].filter(Boolean).join(', ')); if (k.demo) meta.push('simulación'); if (k.video) meta.push('con vídeo'); if (k.tag) meta.push(escapeHtml(k.tag));
       return `<li data-id="${k.id}" class="${S.current === k.id ? 'sel' : ''}"><div><div class="h2">${main}</div><div class="h1">${meta.join(', ')}</div></div><button class="ico${k.fav ? ' on' : ''}" data-fav="${k.id}" aria-label="${k.fav ? 'Quitar de favoritos' : 'Marcar como favorito'}" aria-pressed="${!!k.fav}">★</button><button class="ico" data-del="${k.id}" aria-label="Borrar este chute">✕</button></li>`;
     }).join('');
   }
   function renderMarks() {
-    const real = kicks.filter((k) => !k.demo && k.res && k.res.ok), el = $('#marks');
+    const real = kicks.filter((k) => !k.demo && usable(k.res)), el = $('#marks');
     if (!real.length) { el.hidden = true; return; }
     const max = (f) => real.reduce((m, k) => { const v = f(k.res); return v != null && isFinite(v) && v > m ? v : m; }, -Infinity);
     const sp = max((r) => r.speedKmh), rp = max((r) => r.rpm), tp = max((r) => (r.topConfidence !== 'baja' ? r.topRpm : null));
@@ -1173,10 +1286,10 @@
 
   // ------------------------------------------------------------ exportar / importar
   function csvOf(list) {
-    const head = ['fecha', 'pie', 'etiqueta', 'velocidad_kmh', 'rpm', 'vueltas_s', 'eje_sobre_horizontal_grados', 'liftado_rpm', 'rosca_rpm', 'bala_rpm', 'salida_grados', 'salida_fuente', 'alcance_m', 'altura_max_m', 'segundo_impacto_ms', 'tipo', 'fiabilidad_giro', 'fiabilidad_liftado', 'video', 'simulado'];
+    const head = ['fecha', 'pie', 'etiqueta', 'velocidad_kmh', 'rpm', 'vueltas_s', 'eje_sobre_horizontal_grados', 'liftado_rpm', 'rosca_rpm', 'bala_rpm', 'salida_grados', 'salida_fuente', 'alcance_m', 'altura_max_m', 'segundo_impacto_ms', 'tipo', 'fiabilidad_giro', 'fiabilidad_liftado', 'video', 'simulado', 'valido', 'original_kmh', 'original_rpm', 'descargado_del_balon'];
     const num = (x, d) => (x == null || !isFinite(x) ? '' : x.toFixed(d || 0).replace('.', ','));
     const q = (s) => '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"';
-    const rows = list.map((k) => { const r = k.res || {}; return [q(new Date(k.at).toLocaleString('es-ES')), q(k.foot ? FOOT[k.foot] : ''), q(k.tag), num(r.speedKmh), num(r.rpm), num(r.rps, 1), num(r.axisAboveHorizontalDeg), num(r.topRpm), num(r.sideRpm), num(r.rifleRpm), num(r.elevDeg, 1), q(r.elevSource || 'balón'), num(r.reachM, 1), num(r.apexM, 1), num(r.secondImpactMs), q(r.ok ? r.type : r.reason), q(r.spinConfidence), q(r.topConfidence), k.video ? 'sí' : 'no', k.demo ? 'sí' : 'no'].join(';'); });
+    const rows = list.map((k) => { const r = k.res || {}; return [q(new Date(k.at).toLocaleString('es-ES')), q(k.foot ? FOOT[k.foot] : ''), q(k.tag), num(r.speedKmh), num(r.rpm), num(r.rps, 1), num(r.axisAboveHorizontalDeg), num(r.topRpm), num(r.sideRpm), num(r.rifleRpm), num(r.elevDeg, 1), q(r.elevSource || 'balón'), num(r.reachM, 1), num(r.apexM, 1), num(r.secondImpactMs), q(r.ok ? r.type : r.reason), q(r.spinConfidence), q(r.topConfidence), k.video ? 'sí' : 'no', k.demo ? 'sí' : 'no', r.ok ? (r.invalid ? 'no' : 'sí') : '', num(k.ref && k.ref.kmh), num(k.ref && k.ref.rpm), k.fetched ? 'sí' : 'no'].join(';'); });
     return '﻿' + head.join(';') + '\n' + rows.join('\n');
   }
   function jsonOf(list) {
@@ -1223,8 +1336,8 @@
   function weekStart(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
   const fmtDay = (d) => d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '');
   function evoData() {
-    const real = kicks.filter((k) => !k.demo && k.res && k.res.ok);
-    const base = real.length ? real : kicks.filter((k) => k.res && k.res.ok);
+    const real = kicks.filter((k) => !k.demo && usable(k.res));
+    const base = real.length ? real : kicks.filter((k) => usable(k.res));
     const M = EVO[settings.evoMetric] || EVO.speed, f = settings.evoFoot;
     const pts = base.filter((k) => f === 'all' || k.foot === f).map((k) => ({ t: new Date(k.at), v: M.of(k.res) })).filter((p) => p.v != null && isFinite(p.v));
     const out = { pts, weeks: [], demo: !real.length && base.length > 0, M };
@@ -1321,43 +1434,70 @@
   };
   const chTitle = (c) => (c.type === 'range' ? `Entre ${c.min} y ${c.max} km/h` : RT[c.type].label);
   const chName = (c, p) => ((c.names && c.names[p]) || '').trim() || 'Jugador ' + (p + 1);
-  function chTurnInfo(c) { const i = c.turns.length; return { idx: i, player: i % c.players, k: Math.floor(i / c.players) + 1, done: i >= c.n * c.players }; }
-  function chScore(c, p) {
-    const mine = c.turns.filter((t) => t.player === p);
+  // Tanda normal de n chutes por jugador; si dos jugadores acaban empatados, muerte súbita: rondas de un
+  // chute cada uno hasta que una ronda tenga ganador.
+  const chBase = (c) => c.n * c.players;
+  function chTurnInfo(c) {
+    const i = c.turns.length, base = chBase(c), total = base + (c.sd || 0) * c.players;
+    return { idx: i, player: i % c.players, k: Math.floor(i / c.players) + 1, sd: i >= base ? Math.floor((i - base) / c.players) + 1 : 0, done: i >= total };
+  }
+  function chScore(c, p) {   // marcador de la tanda normal
+    const mine = c.turns.slice(0, chBase(c)).filter((t) => t.player === p);
     if (c.type === 'range') return mine.filter((t) => t.hit).length;
     const v = mine.map((t) => t.v).filter((x) => x != null && isFinite(x));
     return v.length ? Math.max(...v) : null;
+  }
+  function chRoundWinner(c, r) {   // ronda r de muerte súbita: 0 o 1 quién la gana, -1 empate, null sin terminar
+    const i = chBase(c) + (r - 1) * c.players, a = c.turns[i], b = c.turns[i + 1];
+    if (!a || !b) return null;
+    if (c.type === 'range') return a.hit === b.hit ? -1 : a.hit ? 0 : 1;
+    const va = a.v == null ? -Infinity : Math.round(a.v), vb = b.v == null ? -Infinity : Math.round(b.v);
+    return va === vb ? -1 : va > vb ? 0 : 1;
   }
   function chCompare(c) {   // -1 empate, 0 o 1 quién va delante (o gana)
     if (c.players < 2) return null;
     const a = chScore(c, 0), b = chScore(c, 1);
     const ra = a == null ? -Infinity : Math.round(a), rb = b == null ? -Infinity : Math.round(b);
-    return ra === rb ? -1 : ra > rb ? 0 : 1;
+    if (ra !== rb) return ra > rb ? 0 : 1;
+    for (let r = 1; r <= (c.sd || 0); r++) { const w = chRoundWinner(c, r); if (w == null) break; if (w >= 0) return w; }
+    return -1;
   }
   const chWinner = chCompare;
+  // Recalcula cuántas rondas de muerte súbita hacen falta y dice si el reto ha terminado.
+  function chSettle(c) {
+    c.sd = 0;
+    if (c.players > 1) while (c.turns.length >= chBase(c) + c.sd * c.players && chCompare(c) < 0) c.sd++;
+    return c.turns.length >= chBase(c) + c.sd * c.players;
+  }
   function chStart(cfg) {
     const names = (cfg.names || ['', '']).slice(0, 2);
-    CH.active = { id: Date.now(), type: cfg.type, min: cfg.min, max: cfg.max, players: cfg.players === 2 ? 2 : 1, n: cfg.n, names, turns: [], startedAt: new Date().toISOString(), done: false };
+    CH.active = { id: Date.now(), type: cfg.type, min: cfg.min, max: cfg.max, players: cfg.players === 2 ? 2 : 1, n: cfg.n, names, turns: [], sd: 0, startedAt: new Date().toISOString(), done: false };
     saveCH(); chRefresh();
   }
   function chRefresh() { renderChallenge(); renderChalStrip(); $('#tabBadge').hidden = !(CH.active && !CH.active.done); }
   function chAssign(kick, res) {
     const c = CH.active; if (!c || c.done) return '';
     const ti = chTurnInfo(c); if (ti.done) return '';
-    const raw = res && res.ok ? RT[c.type].of(res) : null, v = raw == null || !isFinite(raw) ? null : Math.round(raw * 10) / 10;
+    if (!usable(res)) {   // el balón no dio una medida válida: no gasta el turno
+      kick.chalSkip = c.id;
+      return (res && res.ok ? 'Chute no válido' : 'No he podido medir este chute') + ': no cuenta para el reto, repítelo';
+    }
+    const raw = RT[c.type].of(res), v = raw == null || !isFinite(raw) ? null : Math.round(raw * 10) / 10;
     const hit = c.type === 'range' ? v != null && v >= c.min && v <= c.max : null;
     c.turns.push({ kickId: kick.id, player: ti.player, v, hit });
     if (kick.foot) { c.feet = c.feet || [null, null]; c.feet[ti.player] = kick.foot; }
-    kick.chal = { id: c.id, player: ti.player, name: c.players > 1 ? chName(c, ti.player) : '', k: ti.k, n: c.n, type: c.type, min: c.min, max: c.max, v, hit };
+    kick.chal = { id: c.id, player: ti.player, name: c.players > 1 ? chName(c, ti.player) : '', k: ti.k, n: c.n, sd: ti.sd, type: c.type, min: c.min, max: c.max, v, hit };
     const parts = [];
     if (c.type === 'range') parts.push(hit ? 'Dentro' : 'Fuera');
-    if (chTurnInfo(c).done) {
+    const sdBefore = c.sd || 0;
+    if (chSettle(c)) {
       c.done = true; c.finishedAt = new Date().toISOString();
       const w = chWinner(c);
       CH.past.unshift({ id: c.id, at: c.finishedAt, title: chTitle(c), summary: chSummary(c) });
       if (CH.past.length > 20) CH.past.length = 20;
-      parts.push('Reto terminado' + (c.players > 1 ? (w < 0 ? ', empate' : ', gana ' + chName(c, w)) : ''));
+      parts.push('Reto terminado' + (c.players > 1 ? (w < 0 ? ', empate' : ', gana ' + chName(c, w) + (c.sd ? ' en la muerte súbita' : '')) : ''));
     } else if (c.players > 1) {
+      if (c.sd > sdBefore) parts.push(sdBefore ? 'Siguen empatados: otro chute cada uno' : 'Empate: muerte súbita, un chute más cada uno');
       const nx = chTurnInfo(c).player;
       parts.push('Le toca a ' + chName(c, nx));
       if (c.feet && c.feet[nx]) { settings.foot = c.feet[nx]; saveSettings(); }   // cada jugador con su pie
@@ -1368,7 +1508,7 @@
   function chScoreLine(c) {
     const u = RT[c.type].unit, sc = (p) => { const s = chScore(c, p); return c.type === 'range' ? `${s} de ${c.n}` : (s == null ? '—' : `${Math.round(s)} ${u}`); };
     if (c.players < 2) return c.type === 'range' ? `${sc(0)} dentro del rango.` : `Mejor chute: ${sc(0)}.`;
-    return `${chName(c, 0)} ${sc(0)}, ${chName(c, 1)} ${sc(1)}.`;
+    return `${chName(c, 0)} ${sc(0)}, ${chName(c, 1)} ${sc(1)}` + (c.sd ? `; desempate en la ronda ${c.sd} de muerte súbita.` : '.');
   }
   function chSummary(c) {
     if (c.players < 2) return chScoreLine(c);
@@ -1380,6 +1520,7 @@
     const t = c.turns.pop();
     const k = kicks.find((x) => x.id === t.kickId); if (k) { delete k.chal; storeKicks(kicks); }
     if (c.done) { c.done = false; delete c.finishedAt; CH.past = CH.past.filter((x) => x.id !== c.id); }
+    chSettle(c);
     saveCH(); chRefresh();
     if (k && S.current === k.id) renderResMeta(k, S.currentRes);
     toast('Chute anulado: ya no cuenta para el reto.');
@@ -1399,10 +1540,11 @@
     $('#retoSetup').hidden = !!c; $('#retoBoard').hidden = !c;
     if (!c) { renderRtSetup(); renderRtPast(); return; }
     $('#rbTitle').textContent = chTitle(c);
-    $('#rbSub').textContent = c.players > 1 ? `${chName(c, 0)} contra ${chName(c, 1)}, ${c.n} chutes cada uno, por turnos.` : `${c.n} chutes.`;
-    const ti = chTurnInfo(c), lead = chCompare(c);
+    $('#rbSub').textContent = c.players > 1 ? `${chName(c, 0)} contra ${chName(c, 1)}, ${c.n} chutes cada uno, por turnos.` + (c.sd ? ' Empataron: muerte súbita, un chute cada uno hasta que gane uno.' : '') : `${c.n} chutes.`;
+    const ti = chTurnInfo(c), lead = chCompare(c), base = chBase(c);
     $('#rbGrid').innerHTML = Array.from({ length: c.players }, (_, p) => {
-      const mine = c.turns.filter((t) => t.player === p), sc = chScore(c, p);
+      const mine = c.turns.slice(0, base).filter((t) => t.player === p), sc = chScore(c, p);
+      const sdT = c.turns.slice(base).filter((t) => t.player === p);
       let bestI = -1;
       if (c.type !== 'range') { let bv = -Infinity; mine.forEach((t, i) => { if (t.v != null && t.v > bv) { bv = t.v; bestI = i; } }); }
       const cells = Array.from({ length: c.n }, (_, i) => {
@@ -1411,19 +1553,24 @@
         const val = t.v == null ? '—' : Math.round(t.v);
         if (c.type === 'range') return `<span class="cell ${t.hit ? 'hit' : 'miss'}" aria-label="Chute ${i + 1}: ${val} km/h, ${t.hit ? 'dentro' : 'fuera'}">${val}</span>`;
         return `<span class="cell ${i === bestI ? 'best' : 'val'}" aria-label="Chute ${i + 1}: ${val} ${RT[c.type].unit}">${val}</span>`;
-      }).join('');
+      }).join('') + (c.sd ? '<span class="sdlab">Muerte súbita</span>' + Array.from({ length: c.sd }, (_, r) => {
+        const t = sdT[r], won = t ? chRoundWinner(c, r + 1) : null;
+        if (!t) return `<span class="cell sd${!c.done && ti.player === p && ti.sd === r + 1 ? ' now' : ''}" aria-label="Desempate ${r + 1}, pendiente">·</span>`;
+        const val = c.type === 'range' ? (t.hit ? '✓' : '✕') : t.v == null ? '—' : Math.round(t.v);
+        return `<span class="cell sd${won === p ? ' win' : ''}" aria-label="Desempate ${r + 1}: ${c.type === 'range' ? (t.hit ? 'dentro' : 'fuera') : val + ' ' + RT[c.type].unit}">${val}</span>`;
+      }).join('') : '');
       const scoreTxt = c.type === 'range' ? String(sc) : (sc == null ? '—' : String(Math.round(sc)));
       const sub = c.type === 'range' ? `dentro del rango, de ${mine.length} ${mine.length === 1 ? 'chute' : 'chutes'}` : `su mejor chute, en ${RT[c.type].unit}`;
       return `<div class="prow${c.players > 1 && lead === p ? ' lead' : ''}"><div class="name">${escapeHtml(chName(c, p))}<small>${sub}</small></div><div class="score">${scoreTxt}</div><div class="cells">${cells}</div></div>`;
     }).join('');
     const res = $('#rbResult');
     if (c.done) {
-      const w = chWinner(c), head = c.players > 1 ? (w < 0 ? 'Empate' : `Gana ${escapeHtml(chName(c, w))}`) : (c.type === 'range' ? `${chScore(c, 0)} de ${c.n} dentro` : `Mejor chute: ${Math.round(chScore(c, 0) || 0)} ${RT[c.type].unit}`);
+      const w = chWinner(c), head = c.players > 1 ? (w < 0 ? 'Empate' : `Gana ${escapeHtml(chName(c, w))}${c.sd ? ' en la muerte súbita' : ''}`) : (c.type === 'range' ? `${chScore(c, 0)} de ${c.n} dentro` : `Mejor chute: ${Math.round(chScore(c, 0) || 0)} ${RT[c.type].unit}`);
       res.innerHTML = `<b>${head}</b>${c.players > 1 ? escapeHtml(chScoreLine(c)) : ''}`; res.hidden = false;
       $('#rbTurn').textContent = '';
     } else {
       res.hidden = true;
-      $('#rbTurn').textContent = c.players > 1 ? `Le toca a ${chName(c, ti.player)}: chute ${ti.k} de ${c.n}.` : `Chute ${ti.k} de ${c.n}.`;
+      $('#rbTurn').textContent = c.players > 1 ? (ti.sd ? `Muerte súbita, ronda ${ti.sd}: le toca a ${chName(c, ti.player)}.` : `Le toca a ${chName(c, ti.player)}: chute ${ti.k} de ${c.n}.`) : `Chute ${ti.k} de ${c.n}.`;
     }
     $('#rbGo').hidden = c.done; $('#rbAgain').hidden = !c.done;
     $('#rbUndo').hidden = !c.turns.length;
@@ -1451,7 +1598,7 @@
     if (scene.captionOff !== show) { scene.captionOff = show; if (screen === 'kick') scene.draw(); }
     if (!show) return;
     const ti = chTurnInfo(c);
-    const who = c.players > 1 ? `Turno de <b>${escapeHtml(chName(c, ti.player))}</b>, chute ${ti.k} de ${c.n}` : `Reto: chute <b>${ti.k} de ${c.n}</b>`;
+    const who = c.players > 1 ? (ti.sd ? `Muerte súbita: turno de <b>${escapeHtml(chName(c, ti.player))}</b>` : `Turno de <b>${escapeHtml(chName(c, ti.player))}</b>, chute ${ti.k} de ${c.n}`) : `Reto: chute <b>${ti.k} de ${c.n}</b>`;
     const goal = c.type === 'range' ? `, de ${c.min} a ${c.max} km/h` : '';
     el.innerHTML = `<span>${who}${goal}</span><button class="go" data-go="retos">Marcador</button>`;
   }
@@ -1574,6 +1721,19 @@
     };
     $('#tag').onchange = () => { const k = kicks.find((x) => x.id === S.current); if (k) { k.tag = $('#tag').value.trim(); storeKicks(kicks); renderHistory(); } };
     document.querySelectorAll('.chips button').forEach((ch) => { ch.onclick = () => { const t = $('#tag'); t.value = (t.value ? t.value + ', ' : '') + ch.textContent; t.onchange(); }; });
+    $('#cmpRes').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-cmp]'); if (!btn) return;
+      const k = kicks.find((x) => x.id === S.current); if (!k) return;
+      if (btn.dataset.cmp === 'save') saveCmp();
+      else if (btn.dataset.cmp === 'edit') { cmpEdit = k.id; renderCmp(k, S.currentRes); const f = $('#refKmh'); if (f) f.focus(); }
+    });
+    $('#cmpRes').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('input')) { e.preventDefault(); saveCmp(); } });
+    $('#set_cmp').checked = !!settings.cmp;
+    $('#set_cmp').onchange = () => {
+      settings.cmp = $('#set_cmp').checked; saveSettings(); renderDock();
+      const k = kicks.find((x) => x.id === S.current); if (k) renderCmp(k, S.currentRes);
+    };
+    $('#btnCmpExport').onclick = exportCmp;
     for (const k of ['sound', 'speak', 'vibrate', 'openField', 'camAudio', 'cam60']) {
       const el = $('#set_' + k); el.checked = !!settings[k];
       el.onchange = () => { settings[k] = el.checked; saveSettings(); if ((k === 'cam60' || k === 'camAudio') && S.cam.open && !S.cam.rolling) { S.cam.close(); if (settings.cam) ensureCam().then(refreshStage).catch((e) => toast(camError(e))); } };
@@ -1588,7 +1748,7 @@
     $('#btnForce').onclick = async () => {
       if (!S.t || !S.t.connected) return toast('Conecta primero el balón.');
       S.pollGen++; S.autoRetried = true;
-      await downloadNow(true);
+      await fetchStored();
     };
     $('#btnCopyLog').onclick = async () => {
       const text = `Smart Ball app ${VERSION}\n${navigator.userAgent}\n\n` + logLines.join('\n');
@@ -1621,11 +1781,12 @@
     setState('disconnected');
     renderHistory(); renderUsage();
     if (kicks.length) renderResult(kicks[0], null, false);
-    renderHistory(); chRefresh(); renderFootSel();
+    if (CH.active && !CH.active.done) chSettle(CH.active);   // retos empezados con la versión anterior
+    renderHistory(); chRefresh(); renderFootSel(); renderCmpSummary();
     watchMinibar();
     log('App Smart Ball ' + VERSION + ' · ' + navigator.userAgent);
     setTimeout(refreshOldResults, 400);
-    window.SmartBallApp = { S, P, act, scene, settings, showScreen, CH, kicks: () => kicks, current: () => ({ kick: kicks.find((x) => x.id === S.current) || null, res: S.currentRes }), analyzeKick };
+    window.SmartBallApp = { S, P, act, scene, settings, showScreen, CH, chRefresh, chLogic: { settle: chSettle, compare: chCompare, turn: chTurnInfo }, kicks: () => kicks, current: () => ({ kick: kicks.find((x) => x.id === S.current) || null, res: S.currentRes }), analyzeKick };
   }
   // los números principales se quedan arriba al bajar por el detalle
   function watchMinibar() {

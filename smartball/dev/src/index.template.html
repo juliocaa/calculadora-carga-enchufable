@@ -7,6 +7,7 @@
 <title>Smart Ball</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
 <style>
   @font-face { font-family: "Anton"; src: url("fonts/anton-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
   @font-face { font-family: "Atkinson Hyperlegible"; src: url("fonts/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
@@ -148,6 +149,21 @@
   .notes li::before { content: ""; position: absolute; left: 0; top: .62em; width: 5px; height: 5px; background: var(--cal-2); }
   .notes li.truth { color: var(--amarilla); } .notes li.truth::before { background: var(--amarilla); }
   .bad { color: var(--cal); background: var(--roja); padding: 10px 12px; margin-top: 14px; }
+  .stars { display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: baseline; margin-top: 14px; font-size: 15px; }
+  .stars b { font-weight: 700; margin-right: 8px; }
+  .stars small { flex-basis: 100%; color: var(--cal-2); font-size: 13px; }
+  .st { position: relative; display: inline-block; font-size: 19px; letter-spacing: 3px; line-height: 1; color: var(--cal-3); }
+  .st::before { content: "★★★★★"; }
+  .st::after { content: "★★★★★"; position: absolute; left: 0; top: 0; width: calc(var(--v) / 5 * 100%); overflow: hidden; white-space: nowrap; color: var(--amarilla); }
+  .cmp { margin-top: 14px; padding: 12px; border: 1.5px solid var(--amarilla); font-size: 15px; }
+  .cmp .quiet { margin-top: 4px; }
+  .cmpin { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; margin-top: 10px; }
+  .cmpin label { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+  .cmpin input[type="text"] { width: 74px; padding: 8px 10px; font-size: 18px; text-align: right; }
+  .inval { color: #FF8A80; font-weight: 700; }
+  .sdlab { flex-basis: 100%; margin-top: 4px; font-size: 13px; color: var(--amarilla); }
+  .cell.sd { border-style: solid; border-color: var(--amarilla); color: var(--amarilla); }
+  .cell.sd.win { background: var(--amarilla); color: var(--tinta); }
 
   /* botones de texto y campos */
   .btn { display: inline-block; padding: 11px 15px; border: 1.5px solid var(--cal); font-weight: 700; font-size: 15px; }
@@ -300,12 +316,14 @@
               <div class="num"><span class="n" id="nSpin"></span><span class="u">rpm</span><span class="c" id="cSpin"></span><span class="d" id="dSpin"></span></div>
             </div>
           </div>
+          <div class="stars" id="resStars" hidden></div>
           <div class="meta">
             <button class="chip" id="resFoot" aria-label="Cambiar el pie de golpeo">Pie sin indicar</button>
             <button class="chip" id="resFav" aria-pressed="false">★ Favorito</button>
           </div>
           <p class="verdict" id="resChal" hidden></p>
           <p class="bad" id="resBad" hidden></p>
+          <div class="cmp" id="cmpRes" hidden></div>
         </div>
 
         <nav class="rtabs" id="rtabs" role="tablist" aria-label="Detalle del chute">
@@ -463,11 +481,11 @@
             <li><b>Carga.</b> Pon el balón en su base alineando los dibujos. Luz verde con parpadeo largo: está cargando. Parpadeo rápido: mal alineado. Luces apagadas: cargado (tarda una hora).</li>
             <li><b>Conecta.</b> En Google Chrome, con Bluetooth y Ubicación activados, pulsa «Conectar balón» y elige el que empieza por DB.</li>
             <li><b>Coloca.</b> Balón en el suelo con el logo hacia arriba y las flechas apuntando al objetivo, siempre igual.</li>
-            <li><b>Chuta.</b> Pulsa «Preparar chute», elige el pie, no toques el balón hasta el silbato y chuta. Tiene que subir al menos 1 m y recorrer 10 m sin botar ni rodar.</li>
+            <li><b>Chuta.</b> Pulsa «Preparar chute», elige el pie, no toques el balón hasta el silbato y chuta. Tiene que subir al menos 1 m y recorrer 10 m sin botar ni rodar. Solo valen los chutes de 29 a 144 km/h y de hasta 900 rpm: fuera de eso el balón no mide bien.</li>
             <li><b>Recoge el balón.</b> Si se aleja más de unos 10 m se corta la conexión; el chute queda guardado dentro y se descarga solo al acercarlo al móvil.</li>
           </ol>
           <p><b>Vídeo.</b> Activa «Vídeo» y apoya el móvil en un trípode. Graba solo unos segundos antes y después de cada chute, y lo puedes ver a cámara lenta, fotograma a fotograma. Si lo grabas de lado (perpendicular al tiro y con el móvil derecho), «Medir el ángulo de salida» fija la altura de la trayectoria y la dibuja encima del vídeo.</p>
-          <p style="margin-top:10px"><b>Retos.</b> En la pestaña Retos eliges qué cuenta, uno o dos jugadores y cuántos chutes. Cada chute se apunta al jugador al que le toca; si uno sale mal, «Anular el último chute» lo quita del marcador.</p>
+          <p style="margin-top:10px"><b>Retos.</b> En la pestaña Retos eliges qué cuenta, uno o dos jugadores y cuántos chutes. Cada chute se apunta al jugador al que le toca; si uno sale mal, «Anular el último chute» lo quita del marcador. Si dos jugadores acaban empatados, hay muerte súbita: un chute cada uno hasta que gane uno. Un chute que el balón no mide bien no cuenta y se repite.</p>
           <p style="margin-top:10px"><b>Qué es medido y qué es estimado.</b> El giro en rpm y la inclinación del eje salen directamente del sensor. La velocidad, el reparto liftado, rosca y bala, y el efecto del giro en la trayectoria se calculan con un modelo aerodinámico. El ángulo de salida es lo menos seguro con el balón solo: lo fijan el primer bote, si entra en el segundo que graba el balón, o el vídeo.</p>
         </div>
       </details>
@@ -481,6 +499,21 @@
           <label class="check"><input type="checkbox" id="set_camAudio"><span>Grabar el sonido<small>El chasquido del golpeo sincroniza el vídeo con los datos.</small></span></label>
           <label class="check"><input type="checkbox" id="set_cam60"><span>Vídeo a 60 imágenes por segundo<small>Si el móvil lo permite. Ocupa más.</small></span></label>
           <p class="quiet" id="clipUsage" style="margin-top:8px"></p>
+        </div>
+      </details>
+      <details id="cmpBox">
+        <summary>Comparar con la app original</summary>
+        <div>
+          <p>Para ajustar las fórmulas de esta app a las de la app original de adidas, se mide el mismo chute con las dos. El balón guarda el último chute hasta que se prepara el siguiente, así que las dos pueden leerlo.</p>
+          <ol style="margin-top:10px">
+            <li>Chuta con la app original y apunta la velocidad y el giro que marca.</li>
+            <li>Ciérrala del todo, quitándola de recientes, para que suelte el balón.</li>
+            <li>Aquí, con el balón conectado, pulsa «Descargar chute del balón» y escribe junto al resultado los valores de la original.</li>
+          </ol>
+          <p style="margin-top:10px">Hacen falta unos 20 chutes, de todo tipo: potentes, con rosca, liftados y sin giro.</p>
+          <label class="check" style="margin-top:8px"><input type="checkbox" id="set_cmp"><span>Modo comparación<small>Añade el botón «Descargar chute del balón» y los campos para los valores de la original.</small></span></label>
+          <p class="quiet" id="cmpSum" style="margin-top:8px"></p>
+          <button class="btn" id="btnCmpExport" style="margin-top:10px">Enviar la comparación</button>
         </div>
       </details>
       <details id="diag">

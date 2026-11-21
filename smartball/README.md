@@ -1,7 +1,8 @@
 # Smart Ball
 
 App web propia para el **adidas miCoach Smart Ball** (2014), cuya app oficial ya no está disponible.
-Funciona en **Google Chrome** (Android o PC) mediante Web Bluetooth; no hay que instalar ningún APK.
+Funciona en **Google Chrome** (Android o PC) mediante Web Bluetooth. En Android, Chrome la instala como una app más
+(menú ⋮ → **Instalar aplicación**): icono propio, pantalla completa y funcionamiento sin cobertura.
 
 ## Uso
 1. Carga el balón en su base (luces apagadas = cargado).
@@ -9,6 +10,12 @@ Funciona en **Google Chrome** (Android o PC) mediante Web Bluetooth; no hay que 
 3. Coloca el balón con el logo hacia arriba y las flechas apuntando al objetivo.
 4. **Preparar chute** → deja el balón quieto → silbato → chuta (≥ 1 m de altura y ≥ 10 m sin botar).
 5. Los datos se descargan solos (móvil a menos de 10 m) y quedan en el historial; se pueden exportar a CSV o JSON.
+
+## Novedades de la versión 3.1
+- **Comparar con la app original**: con el modo comparación activado (Ajustes), «Descargar chute del balón» lee el último chute que guarda el balón sin preparar otro, por ejemplo el que acaba de medir la app oficial, y junto al resultado se escriben su velocidad y su giro. Con unos 20 chutes así se ajustan las fórmulas de esta app a las suyas.
+- **Chute sin giro** con los mismos criterios que la app oficial (hasta 60 rpm desde 72 km/h, 120 rpm desde 90 km/h o 150 rpm desde 108 km/h) y dos notas de 0 a 5 estrellas: velocidad y poco giro.
+- **Muerte súbita** en los retos de dos jugadores que acaban empatados.
+- **Chute válido**: de 29 a 144 km/h y hasta 900 rpm. Fuera de esos límites se marca como no válido, no cuenta para récords, evolución ni retos, y en un reto se repite.
 
 ## Qué enseña (versión 3)
 - **Pantalla Chute**: mientras se prepara el chute, el campo ocupa toda la pantalla, visto desde detrás del balón; al llegar los datos, la trayectoria se anima y la cámara se aleja hasta la perspectiva. También vista lateral y desde arriba.
